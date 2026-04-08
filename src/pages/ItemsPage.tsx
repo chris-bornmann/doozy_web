@@ -15,11 +15,13 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { fetchItems, deleteItem, reorderItem } from '../api/items'
-import type { Item, SortBy } from '../types'
+import { fetchTags, fetchItemIdsByTag } from '../api/tags'
+import type { Item, SortBy, Tag } from '../types'
 import { useAuth } from '../context/AuthContext'
 import ItemRow from '../components/ItemRow'
 import CreateItemModal from '../components/CreateItemModal'
 import AiCommandBar from '../components/AiCommandBar'
+import FilterDropdown from '../components/FilterDropdown'
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: 'created_on', label: 'Created' },
@@ -39,6 +41,12 @@ export default function ItemsPage() {
   const [error, setError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [deleting, setDeleting] = useState(false)
+
+  // Tag filter state
+  const [availableTags, setAvailableTags] = useState<Tag[]>([])
+  const [filterTagIds, setFilterTagIds] = useState<Set<number>>(new Set())
+  const [filterItemIds, setFilterItemIds] = useState<Set<number> | null>(null)
+  const [filterLoading, setFilterLoading] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -77,6 +85,31 @@ export default function ItemsPage() {
     loadItems(sortBy)
   }, [sortBy, loadItems])
 
+  // Load all available tags once on mount
+  useEffect(() => {
+    fetchTags().then(tags => setAvailableTags(tags)).catch(() => {})
+  }, [])
+
+  // When the active filter tags change, fetch the matching item IDs for each tag
+  // then intersect them (AND logic: item must have ALL selected tags)
+  useEffect(() => {
+    if (filterTagIds.size === 0) {
+      setFilterItemIds(null)
+      return
+    }
+    let cancelled = false
+    setFilterLoading(true)
+    Promise.all(Array.from(filterTagIds).map(tagId => fetchItemIdsByTag(tagId)))
+      .then(results => {
+        if (cancelled) return
+        const union = new Set(results.flat())
+        setFilterItemIds(union)
+      })
+      .catch(() => { if (!cancelled) setFilterItemIds(null) })
+      .finally(() => { if (!cancelled) setFilterLoading(false) })
+    return () => { cancelled = true }
+  }, [filterTagIds])
+
   function handleSortChange(s: SortBy) {
     setSortBy(s)
     setSelected(new Set())
@@ -92,10 +125,10 @@ export default function ItemsPage() {
   }
 
   function toggleSelectAll() {
-    if (selected.size === items.length) {
+    if (selected.size === displayedItems.length) {
       setSelected(new Set())
     } else {
-      setSelected(new Set(items.map(i => i.id!)))
+      setSelected(new Set(displayedItems.map(i => i.id!)))
     }
   }
 
@@ -154,10 +187,24 @@ export default function ItemsPage() {
     loadItems(sortBy)
   }
 
-  const allSelected = items.length > 0 && selected.size === items.length
-  const someSelected = selected.size > 0 && selected.size < items.length
+  function toggleFilterTag(tagId: number) {
+    setFilterTagIds(prev => {
+      const next = new Set(prev)
+      if (next.has(tagId)) next.delete(tagId)
+      else next.add(tagId)
+      return next
+    })
+    setSelected(new Set())
+  }
+
+  const displayedItems = filterItemIds !== null
+    ? items.filter(i => filterItemIds.has(i.id!))
+    : items
+
+  const allSelected = displayedItems.length > 0 && selected.size === displayedItems.length
+  const someSelected = selected.size > 0 && selected.size < displayedItems.length
   const isCustomSort = sortBy === 'custom'
-  const itemIds = items.map(i => i.id!)
+  const itemIds = displayedItems.map(i => i.id!)
 
   return (
     <div className="items-page">
@@ -185,21 +232,29 @@ export default function ItemsPage() {
         </div>
       </header>
 
-      {/* Sort tabs */}
+      {/* Sort + filter bar */}
       <div className="items-sort-bar">
-        <span className="items-sort-label">Sort by</span>
-        <div className="items-sort-tabs">
+        <label className="items-sort-label" htmlFor="sort-select">Sort by</label>
+        <select
+          id="sort-select"
+          className="items-sort-select"
+          value={sortBy}
+          onChange={e => handleSortChange(e.target.value as SortBy)}
+        >
           {SORT_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              className={`items-sort-tab ${sortBy === opt.value ? 'items-sort-tab--active' : ''}`}
-              onClick={() => handleSortChange(opt.value)}
-            >
-              {opt.label}
-              {opt.value === 'custom' && <DragHintIcon />}
-            </button>
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
           ))}
-        </div>
+        </select>
+
+        <div className="items-toolbar-divider" />
+        <FilterDropdown
+          label="Tag"
+          options={availableTags.map(t => ({ id: t.id!, label: t.name }))}
+          selected={filterTagIds}
+          onToggle={toggleFilterTag}
+          onClear={() => { setFilterTagIds(new Set()); setSelected(new Set()) }}
+        />
+        {filterLoading && <span className="items-filter-loading">…</span>}
 
         {/* Selection toolbar */}
         {selected.size > 0 && (
@@ -239,6 +294,11 @@ export default function ItemsPage() {
               <PlusIcon /> New Item
             </button>
           </div>
+        ) : displayedItems.length === 0 ? (
+          <div className="items-empty">
+            <p className="items-empty-title">No items match the selected filters.</p>
+            <p className="items-empty-sub">Try removing a filter tag to see more results.</p>
+          </div>
         ) : (
           <div className="items-list">
             {/* Select-all row */}
@@ -254,7 +314,10 @@ export default function ItemsPage() {
                 </div>
               </button>
               <span className="items-list-count">
-                {items.length} item{items.length !== 1 ? 's' : ''}
+                {displayedItems.length} item{displayedItems.length !== 1 ? 's' : ''}
+                {filterItemIds !== null && (
+                  <span className="items-list-count-filtered"> (filtered from {items.length})</span>
+                )}
               </span>
             </div>
 
@@ -264,7 +327,7 @@ export default function ItemsPage() {
               onDragEnd={handleDragEnd}
             >
               <SortableContext items={itemIds} strategy={verticalListSortingStrategy}>
-                {items.map((item, idx) => (
+                {displayedItems.map((item, idx) => (
                   <div
                     key={item.id}
                     style={{ animationDelay: `${idx * 35}ms` }}
@@ -309,16 +372,6 @@ function SignOutIcon() {
   )
 }
 
-function DragHintIcon() {
-  return (
-    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
-      <circle cx="3" cy="3" r="1" fill="currentColor" opacity="0.6" />
-      <circle cx="7" cy="3" r="1" fill="currentColor" opacity="0.6" />
-      <circle cx="3" cy="7" r="1" fill="currentColor" opacity="0.6" />
-      <circle cx="7" cy="7" r="1" fill="currentColor" opacity="0.6" />
-    </svg>
-  )
-}
 
 function CheckIcon() {
   return (
