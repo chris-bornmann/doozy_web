@@ -970,6 +970,121 @@ body {
 }
 .modal-due-btn:hover { border-color: var(--amber); }
 
+/* ─── AI command bar ─────────────────────────────────────────────────────── */
+.ai-command-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--ink-800);
+  border: 1px solid var(--ink-600);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.ai-command-bar:focus-within {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px rgba(201, 149, 76, 0.15);
+}
+
+.ai-command-input {
+  background: transparent;
+  border: none;
+  color: var(--ink-100);
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 8px 14px;
+  width: 220px;
+  outline: none;
+  min-width: 0;
+}
+.ai-command-input::placeholder { color: var(--ink-500); }
+.ai-command-input:disabled { opacity: 0.5; }
+.ai-command-input--error { color: var(--crimson-light); }
+
+.ai-command-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  background: transparent;
+  border: none;
+  border-left: 1px solid var(--ink-700);
+  color: var(--ink-500);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+.ai-command-submit:hover:not(:disabled) {
+  color: var(--amber);
+  background: var(--amber-muted);
+}
+.ai-command-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-spinner--amber {
+  width: 13px;
+  height: 13px;
+  border: 2px solid rgba(201, 149, 76, 0.2);
+  border-top-color: var(--amber);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+.ai-error-toast {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--crimson-muted);
+  border: 1px solid var(--crimson);
+  border-radius: var(--radius);
+  color: var(--crimson-light);
+  font-size: 12.5px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  z-index: 200;
+  animation: slideDown 0.2s ease;
+  max-width: 320px;
+  white-space: normal;
+}
+
+/* ─── AI response dialog ─────────────────────────────────────────────────── */
+.ai-response-modal {
+  max-width: 600px;
+}
+
+.ai-response-body {
+  padding: 0 24px 8px;
+}
+
+.ai-error-message {
+  margin: 0;
+  padding: 14px 16px;
+  background: var(--crimson-muted);
+  border: 1px solid var(--crimson);
+  border-radius: var(--radius);
+  color: var(--crimson-light);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.ai-response-pre {
+  margin: 0;
+  background: var(--ink-950);
+  border: 1px solid var(--ink-700);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  color: var(--ink-300);
+  line-height: 1.65;
+  overflow-x: auto;
+  max-height: 400px;
+  overflow-y: auto;
+  white-space: pre;
+}
+
 /* ─── Animations ─────────────────────────────────────────────────────────── */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(6px); }
