@@ -8,6 +8,7 @@ import { patchItem } from '../api/items'
 import { sanitizeHtml } from '../utils/sanitize'
 import DatePicker from './DatePicker'
 import RichTextEditor from './RichTextEditor'
+import ItemDetailModal from './ItemDetailModal'
 
 interface ItemRowProps {
   item: Item
@@ -34,6 +35,7 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, sort
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
+  const [showDetail, setShowDetail] = useState(false)
   const [editingField, setEditingField] = useState<EditingField>(null)
   const [nameValue, setNameValue] = useState(item.name)
   const [descValue, setDescValue] = useState(item.description ?? '')
@@ -191,11 +193,21 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, sort
         </button>
       )}
 
-      <button className="item-checkbox" onClick={() => onToggleSelect(id)} aria-label={selected ? 'Deselect' : 'Select'}>
-        <div className={`item-checkbox-box ${selected ? 'item-checkbox-box--checked' : ''}`}>
-          {selected && <CheckIcon />}
-        </div>
-      </button>
+      <div className="item-left-col">
+        <button className="item-checkbox" onClick={() => onToggleSelect(id)} aria-label={selected ? 'Deselect' : 'Select'}>
+          <div className={`item-checkbox-box ${selected ? 'item-checkbox-box--checked' : ''}`}>
+            {selected && <CheckIcon />}
+          </div>
+        </button>
+        <button
+          className="item-expand-btn"
+          onClick={() => setShowDetail(true)}
+          aria-label="Edit item details"
+          title="Open detail view"
+        >
+          <ExpandIcon />
+        </button>
+      </div>
 
       <div className="item-content">
         {/* Row 1: name · state · priority · due date */}
@@ -280,6 +292,15 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, sort
           onClose={closeStateDropdown}
         />,
         document.body,
+      )}
+
+      {/* Item detail modal */}
+      {showDetail && (
+        <ItemDetailModal
+          item={item}
+          onUpdate={updated => { onUpdate(updated); setShowDetail(false) }}
+          onClose={() => setShowDetail(false)}
+        />
       )}
     </div>
   )
@@ -378,6 +399,13 @@ function CheckIcon() {
   return (
     <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
       <path d="M1 3.5L4 6.5L9 1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+function ExpandIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+      <path d="M1 4V1h3M7 1h3v3M10 7v3H7M4 10H1V7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
