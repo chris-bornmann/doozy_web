@@ -5,6 +5,7 @@ import { Priority, PRIORITY_LABELS, State, STATE_LABELS, STATE_CSS } from '../ty
 import type { Item } from '../types'
 import RichTextEditor from './RichTextEditor'
 import DatePicker from './DatePicker'
+import TagEditor from './TagEditor'
 
 interface ItemDetailModalProps {
   item: Item
@@ -189,6 +190,12 @@ export default function ItemDetailModal({ item, onUpdate, onClose }: ItemDetailM
                 </div>
               )}
             </div>
+          </div>
+
+          {/* Tags */}
+          <div className="modal-field">
+            <label className="modal-label">Tags</label>
+            <TagEditor itemId={item.id!} />
           </div>
 
           {/* Read-only created date */}

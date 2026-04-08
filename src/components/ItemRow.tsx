@@ -1,10 +1,11 @@
-import { useState, useRef, useCallback, useEffect, KeyboardEvent } from 'react'
+import { useState, useRef, useCallback, useEffect, useLayoutEffect, KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Item } from '../types'
+import type { Item, Tag } from '../types'
 import { Priority, PRIORITY_LABELS, State, STATE_LABELS, STATE_CSS } from '../types'
 import { patchItem } from '../api/items'
+import { fetchItemTags } from '../api/tags'
 import { sanitizeHtml } from '../utils/sanitize'
 import DatePicker from './DatePicker'
 import RichTextEditor from './RichTextEditor'
@@ -43,6 +44,21 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, sort
   const [priorityValue, setPriorityValue] = useState<Priority | null>(item.priority ?? null)
   const [stateValue, setStateValue] = useState<State>(item.state ?? State.New)
   const [saving, setSaving] = useState(false)
+
+  const [rowTags, setRowTags] = useState<Tag[]>([])
+  const tagsListRef = useRef<HTMLDivElement>(null)
+  const [tagsOverflow, setTagsOverflow] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    fetchItemTags(id).then(tags => { if (!cancelled) setRowTags(tags) }).catch(() => {})
+    return () => { cancelled = true }
+  }, [id])
+
+  useLayoutEffect(() => {
+    const el = tagsListRef.current
+    if (el) setTagsOverflow(el.scrollWidth > el.clientWidth)
+  }, [rowTags])
 
   const nameInputRef = useRef<HTMLInputElement>(null)
   const dueBtnRef = useRef<HTMLButtonElement>(null)
@@ -270,7 +286,14 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, sort
               )}
             </div>
           )}
-          <div className="item-line2-spacer" />
+          <div className="item-row-tags">
+            <div ref={tagsListRef} className="item-row-tags-list">
+              {rowTags.map(tag => (
+                <span key={tag.id} className="item-row-tag">{tag.name}</span>
+              ))}
+            </div>
+            {tagsOverflow && <span className="item-row-tags-more">…</span>}
+          </div>
           <span className="item-created">Created {formatDate(item.created_on)}</span>
         </div>
       </div>
@@ -298,8 +321,17 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, sort
       {showDetail && (
         <ItemDetailModal
           item={item}
-          onUpdate={updated => { onUpdate(updated); setShowDetail(false) }}
-          onClose={() => setShowDetail(false)}
+          onUpdate={updated => {
+            onUpdate(updated)
+            setShowDetail(false)
+            // Re-fetch tags in case they were changed in the modal
+            fetchItemTags(id).then(tags => setRowTags(tags)).catch(() => {})
+          }}
+          onClose={() => {
+            setShowDetail(false)
+            // Tags may have been changed without hitting OK
+            fetchItemTags(id).then(tags => setRowTags(tags)).catch(() => {})
+          }}
         />
       )}
     </div>
