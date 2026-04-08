@@ -186,8 +186,9 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, sort
 
   const now = Date.now()
   const dueMs = dueValue ? new Date(dueValue).getTime() : null
-  const isDueSoon = dueMs != null && dueMs > now && dueMs - now < 48 * 3600 * 1000
-  const isOverdue = dueMs != null && dueMs < now
+  const isActive = stateValue !== State.Cancelled && stateValue !== State.Done
+  const isDueSoon = isActive && dueMs != null && dueMs > now && dueMs - now < 3 * 24 * 3600 * 1000
+  const isOverdue = isActive && dueMs != null && dueMs < now
 
   const isCancelled = stateValue === State.Cancelled
 
@@ -201,6 +202,8 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, sort
         isDragging ? 'item-row--dragging' : '',
         saving ? 'item-row--saving' : '',
         isCancelled ? 'item-row--cancelled' : '',
+        isOverdue ? 'item-row--overdue' : '',
+        isDueSoon ? 'item-row--due-soon' : '',
       ].join(' ')}
     >
       {sortable && (
