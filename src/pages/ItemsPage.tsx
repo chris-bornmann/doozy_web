@@ -41,6 +41,9 @@ export default function ItemsPage() {
   const [error, setError] = useState('')
   const [showCreate, setShowCreate] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  const [pageNum, setPageNum] = useState(1)
+  const [pageSize, setPageSize] = useState(20)
+  const [totalPages, setTotalPages] = useState(1)
 
   // Tag filter state
   const [availableTags, setAvailableTags] = useState<Tag[]>([])
@@ -54,12 +57,12 @@ export default function ItemsPage() {
   )
 
   const loadItems = useCallback(
-    async (sort: SortBy) => {
+    async (sort: SortBy, page: number, size: number) => {
       setLoading(true)
       setError('')
       try {
-        const page = await fetchItems(sort)
-        let list = page.items
+        const result = await fetchItems(sort, page, size)
+        let list = result.items
         if (sort === 'name') {
           list = [...list].sort((a, b) => a.name.localeCompare(b.name))
         } else if (sort === 'priority') {
@@ -71,6 +74,7 @@ export default function ItemsPage() {
           })
         }
         setItems(list)
+        setTotalPages(result.pages)
         setSelected(new Set())
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load items')
@@ -82,8 +86,8 @@ export default function ItemsPage() {
   )
 
   useEffect(() => {
-    loadItems(sortBy)
-  }, [sortBy, loadItems])
+    loadItems(sortBy, pageNum, pageSize)
+  }, [sortBy, pageNum, pageSize, loadItems])
 
   // Load all available tags once on mount
   useEffect(() => {
@@ -112,6 +116,13 @@ export default function ItemsPage() {
 
   function handleSortChange(s: SortBy) {
     setSortBy(s)
+    setPageNum(1)
+    setSelected(new Set())
+  }
+
+  function handlePageSizeChange(size: number) {
+    setPageSize(size)
+    setPageNum(1)
     setSelected(new Set())
   }
 
@@ -134,7 +145,6 @@ export default function ItemsPage() {
 
   function handleItemUpdate(updated: Item) {
     setItems(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i))
-    loadItems(sortBy)
   }
 
   async function handleDeleteSelected() {
@@ -172,7 +182,7 @@ export default function ItemsPage() {
       await reorderItem(movedId, afterId)
     } catch (err) {
       console.error('Reorder failed, re-fetching:', err)
-      loadItems(sortBy)
+      loadItems(sortBy, pageNum, pageSize)
     }
   }
 
@@ -184,7 +194,7 @@ export default function ItemsPage() {
       return [newItem, ...prev]  // will re-sort on next fetch; good enough for optimistic insert
     })
     // Reload to get correct order from server
-    loadItems(sortBy)
+    loadItems(sortBy, pageNum, pageSize)
   }
 
   function toggleFilterTag(tagId: number) {
@@ -219,7 +229,7 @@ export default function ItemsPage() {
         </div>
 
         <div className="items-header-actions">
-          <AiCommandBar onSuccess={() => loadItems(sortBy)} />
+          <AiCommandBar onSuccess={() => loadItems(sortBy, pageNum, pageSize)} />
           <button
             className="btn-primary btn-create"
             onClick={() => setShowCreate(true)}
@@ -256,6 +266,19 @@ export default function ItemsPage() {
         />
         {filterLoading && <span className="items-filter-loading">…</span>}
 
+        <div className="items-toolbar-divider" />
+        <label className="items-sort-label" htmlFor="page-size-select">Items</label>
+        <select
+          id="page-size-select"
+          className="items-sort-select"
+          value={pageSize}
+          onChange={e => handlePageSizeChange(Number(e.target.value))}
+        >
+          {[10, 20, 50, 100].map(n => (
+            <option key={n} value={n}>{n}</option>
+          ))}
+        </select>
+
         {/* Selection toolbar */}
         {selected.size > 0 && (
           <div className="items-selection-bar">
@@ -282,7 +305,7 @@ export default function ItemsPage() {
         ) : error ? (
           <div className="items-error">
             <p>{error}</p>
-            <button className="btn-ghost btn-sm" onClick={() => loadItems(sortBy)}>
+            <button className="btn-ghost btn-sm" onClick={() => loadItems(sortBy, pageNum, pageSize)}>
               Retry
             </button>
           </div>
@@ -344,6 +367,30 @@ export default function ItemsPage() {
                 ))}
               </SortableContext>
             </DndContext>
+
+            {totalPages > 1 && (
+              <div className="items-pagination">
+                <button
+                  className="items-page-btn"
+                  onClick={() => setPageNum(p => Math.max(1, p - 1))}
+                  disabled={pageNum === 1}
+                  aria-label="Previous page"
+                >
+                  <ChevronLeftIcon />
+                </button>
+                <span className="items-page-info">
+                  Page {pageNum} of {totalPages}
+                </span>
+                <button
+                  className="items-page-btn"
+                  onClick={() => setPageNum(p => Math.min(totalPages, p + 1))}
+                  disabled={pageNum === totalPages}
+                  aria-label="Next page"
+                >
+                  <ChevronRightIcon />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </main>
@@ -372,6 +419,22 @@ function SignOutIcon() {
   )
 }
 
+
+function ChevronLeftIcon() {
+  return (
+    <svg width="7" height="12" viewBox="0 0 7 12" fill="none">
+      <path d="M6 1L1 6l5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ChevronRightIcon() {
+  return (
+    <svg width="7" height="12" viewBox="0 0 7 12" fill="none">
+      <path d="M1 1l5 5-5 5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
 
 function CheckIcon() {
   return (
