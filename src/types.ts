@@ -1,7 +1,7 @@
 export enum Priority {
-  LOW = 0,
+  HIGH = 0,
   MEDIUM = 1,
-  HIGH = 2,
+  LOW = 2,
 }
 
 export const PRIORITY_LABELS: Record<Priority, string> = {

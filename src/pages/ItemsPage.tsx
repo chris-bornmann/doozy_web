@@ -19,6 +19,7 @@ import type { Item, SortBy } from '../types'
 import { useAuth } from '../context/AuthContext'
 import ItemRow from '../components/ItemRow'
 import CreateItemModal from '../components/CreateItemModal'
+import AiCommandBar from '../components/AiCommandBar'
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: 'created_on', label: 'Created' },
@@ -53,11 +54,11 @@ export default function ItemsPage() {
         if (sort === 'name') {
           list = [...list].sort((a, b) => a.name.localeCompare(b.name))
         } else if (sort === 'priority') {
-          // API returns ascending (LOW→HIGH); display HIGH→MEDIUM→LOW→none
+          // HIGH=0, MEDIUM=1, LOW=2 — sort ascending so HIGH comes first; nulls last
           list = [...list].sort((a, b) => {
-            const pa = a.priority ?? -1
-            const pb = b.priority ?? -1
-            return pb - pa
+            const pa = a.priority ?? 999
+            const pb = b.priority ?? 999
+            return pa - pb
           })
         }
         setItems(list)
@@ -169,6 +170,7 @@ export default function ItemsPage() {
         </div>
 
         <div className="items-header-actions">
+          <AiCommandBar onSuccess={() => loadItems(sortBy)} />
           <button
             className="btn-primary btn-create"
             onClick={() => setShowCreate(true)}
