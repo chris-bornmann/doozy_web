@@ -65,6 +65,11 @@ export interface User {
   created_on: string
 }
 
+export interface Tag {
+  id?: number | null
+  name: string
+}
+
 export interface Page<T> {
   items: T[]
   total: number
