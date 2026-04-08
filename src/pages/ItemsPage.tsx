@@ -101,6 +101,7 @@ export default function ItemsPage() {
 
   function handleItemUpdate(updated: Item) {
     setItems(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i))
+    loadItems(sortBy)
   }
 
   async function handleDeleteSelected() {

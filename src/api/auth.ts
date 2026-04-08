@@ -37,3 +37,14 @@ export function getGoogleLoginUrl(): string {
 export async function fetchCurrentUser(): Promise<User> {
   return apiFetch<User>('/users/me')
 }
+
+export async function registerUser(
+  username: string,
+  password: string,
+  full_name: string,
+): Promise<User> {
+  return apiFetch<User>('/users/', {
+    method: 'POST',
+    body: JSON.stringify({ username, password, full_name }),
+  })
+}
