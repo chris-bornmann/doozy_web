@@ -25,6 +25,7 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: 'created_on', label: 'Created' },
   { value: 'due_on', label: 'Due Date' },
   { value: 'priority', label: 'Priority' },
+  { value: 'state', label: 'State' },
   { value: 'name', label: 'Name' },
   { value: 'custom', label: 'Custom' },
 ]

@@ -5,24 +5,46 @@ export enum Priority {
 }
 
 export const PRIORITY_LABELS: Record<Priority, string> = {
-  [Priority.LOW]: 'LOW',
-  [Priority.MEDIUM]: 'MEDIUM',
   [Priority.HIGH]: 'HIGH',
+  [Priority.MEDIUM]: 'MEDIUM',
+  [Priority.LOW]: 'LOW',
 }
 
 export const PRIORITY_COLORS: Record<Priority, string> = {
-  [Priority.LOW]: 'priority-low',
-  [Priority.MEDIUM]: 'priority-medium',
   [Priority.HIGH]: 'priority-high',
+  [Priority.MEDIUM]: 'priority-medium',
+  [Priority.LOW]: 'priority-low',
 }
 
-export type SortBy = 'priority' | 'created_on' | 'due_on' | 'custom' | 'name'
+export enum State {
+  New = 0,
+  InProgress = 1,
+  Done = 2,
+  Cancelled = 3,
+}
+
+export const STATE_LABELS: Record<State, string> = {
+  [State.New]: 'New',
+  [State.InProgress]: 'In Progress',
+  [State.Done]: 'Done',
+  [State.Cancelled]: 'Cancelled',
+}
+
+export const STATE_CSS: Record<State, string> = {
+  [State.New]: 'state-new',
+  [State.InProgress]: 'state-in-progress',
+  [State.Done]: 'state-done',
+  [State.Cancelled]: 'state-cancelled',
+}
+
+export type SortBy = 'priority' | 'created_on' | 'due_on' | 'state' | 'custom' | 'name'
 
 export interface Item {
   id?: number
   name: string
   description?: string | null
   priority?: Priority | null
+  state?: State | null
   creator_id: number
   created_on: string
   due_on?: string | null

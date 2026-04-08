@@ -31,12 +31,13 @@ export async function createItem(
 
 export async function patchItem(
   id: number,
-  fields: Partial<Pick<Item, 'name' | 'description' | 'priority' | 'due_on'>>,
+  fields: Partial<Pick<Item, 'name' | 'description' | 'priority' | 'due_on' | 'state'>>,
 ): Promise<Item> {
   const body: Record<string, string | number | null> = {}
   if (fields.name != null) body['name'] = fields.name
   if (fields.description != null) body['description'] = fields.description
   if (fields.priority != null) body['priority'] = fields.priority
+  if (fields.state != null) body['state'] = fields.state
   if (fields.due_on !== undefined) body['due_on'] = fields.due_on ?? null
   return apiFetch<Item>(`/items/${id}`, {
     method: 'PATCH',
