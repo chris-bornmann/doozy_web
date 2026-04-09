@@ -16,6 +16,7 @@ import {
 } from '@dnd-kit/sortable'
 import { fetchItems, deleteItem, reorderItem } from '../api/items'
 import { fetchTags } from '../api/tags'
+import type { AiResponse } from '../api/ai'
 import type { Item, ItemFilter, FiltersState, SortBy, Tag } from '../types'
 import { EMPTY_FILTERS } from '../types'
 import { useAuth } from '../context/AuthContext'
@@ -24,6 +25,20 @@ import CreateItemModal from '../components/CreateItemModal'
 import AiCommandBar from '../components/AiCommandBar'
 import FilterDropdown from '../components/FilterDropdown'
 import FiltersModal from '../components/FiltersModal'
+
+function itemFilterToFiltersState(f: ItemFilter): FiltersState {
+  return {
+    name: f.name ?? '',
+    states: new Set(f.state ?? []),
+    priorities: new Set(f.priority ?? []),
+    createdStart: f.created_after ?? f.created_on ?? null,
+    createdEnd:   f.created_before ?? f.created_on ?? null,
+    dueStart:     f.due_after ?? f.due_on ?? null,
+    dueEnd:       f.due_before ?? f.due_on ?? null,
+    completedStart: f.completed_after ?? f.completed_on ?? null,
+    completedEnd:   f.completed_before ?? f.completed_on ?? null,
+  }
+}
 
 function applyDateRange(
   filter: ItemFilter,
@@ -255,8 +270,12 @@ export default function ItemsPage() {
         </div>
 
         <div className="items-header-actions">
-          <AiCommandBar onSuccess={() => {
-            loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))
+          <AiCommandBar onResult={(result: AiResponse) => {
+            if (result.operation === 'list' && result.filter) {
+              setAdvancedFilter(itemFilterToFiltersState(result.filter))
+            } else {
+              loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))
+            }
           }} />
           <button
             className="btn-primary btn-create"
