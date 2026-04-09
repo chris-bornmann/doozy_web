@@ -298,6 +298,9 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, sort
             {tagsOverflow && <span className="item-row-tags-more">…</span>}
           </div>
           <span className="item-created">Created {formatDate(item.created_on)}</span>
+          {(stateValue === State.Done || stateValue === State.Cancelled) && (
+            <span className="item-created">Completed {formatDate(item.completed_on)}</span>
+          )}
         </div>
       </div>
 

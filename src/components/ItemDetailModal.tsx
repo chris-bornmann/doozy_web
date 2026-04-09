@@ -206,6 +206,14 @@ export default function ItemDetailModal({ item, onUpdate, onClose }: ItemDetailM
             <p className="modal-readonly">{formatDate(item.created_on)}</p>
           </div>
 
+          {/* Read-only completed date — shown only for Done / Cancelled */}
+          {(state === State.Done || state === State.Cancelled) && (
+            <div className="modal-field">
+              <label className="modal-label">Completed</label>
+              <p className="modal-readonly">{formatDate(item.completed_on)}</p>
+            </div>
+          )}
+
           {error && <p className="modal-error">{error}</p>}
 
           <div className="modal-actions">
