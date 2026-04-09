@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, type FormEvent, type KeyboardEvent } from 'react'
-import { postAiRequest } from '../api/ai'
+import { postAiRequest, type AiResponse } from '../api/ai'
 
 interface AiCommandBarProps {
-  onSuccess: () => void
+  onResult: (response: AiResponse) => void
 }
 
-export default function AiCommandBar({ onSuccess }: AiCommandBarProps) {
+export default function AiCommandBar({ onResult }: AiCommandBarProps) {
   const [text, setText] = useState('')
   const [loading, setLoading] = useState(false)
   const [errorDialog, setErrorDialog] = useState<string | null>(null)
@@ -19,11 +19,10 @@ export default function AiCommandBar({ onSuccess }: AiCommandBarProps) {
     setLoading(true)
     try {
       const result = await postAiRequest(trimmed)
-      setText('')
       if (result.error) {
         setErrorDialog(result.error)
       } else {
-        onSuccess()
+        onResult(result)
       }
     } catch (err) {
       setHttpError(err instanceof Error ? err.message : 'Request failed')
