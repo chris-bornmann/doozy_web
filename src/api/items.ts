@@ -1,10 +1,11 @@
 import { apiFetch } from './client'
-import type { Item, Page, SortBy } from '../types'
+import type { Item, ItemFilter, Page, SortBy } from '../types'
 
 export async function fetchItems(
   sortBy: SortBy = 'created_on',
   page = 1,
   size = 100,
+  filter: ItemFilter = {},
 ): Promise<Page<Item>> {
   // 'name' sort is handled client-side; pass 'created_on' to API
   const apiSort: string = sortBy === 'name' ? 'created_on' : sortBy
@@ -13,7 +14,10 @@ export async function fetchItems(
     page: String(page),
     size: String(size),
   })
-  return apiFetch<Page<Item>>(`/items/?${params}`)
+  return apiFetch<Page<Item>>(`/items/search?${params}`, {
+    method: 'POST',
+    body: JSON.stringify(filter),
+  })
 }
 
 export async function createItem(

@@ -70,6 +70,46 @@ export interface Tag {
   name: string
 }
 
+export interface FiltersState {
+  name: string
+  states: Set<State>
+  priorities: Set<Priority>
+  createdStart: string | null
+  createdEnd: string | null
+  dueStart: string | null
+  dueEnd: string | null
+  completedStart: string | null
+  completedEnd: string | null
+}
+
+export const EMPTY_FILTERS: FiltersState = {
+  name: '',
+  states: new Set(),
+  priorities: new Set(),
+  createdStart: null,
+  createdEnd: null,
+  dueStart: null,
+  dueEnd: null,
+  completedStart: null,
+  completedEnd: null,
+}
+
+export interface ItemFilter {
+  name?: string | null
+  state?: State[]
+  priority?: Priority[]
+  created_after?: string | null
+  created_before?: string | null
+  created_on?: string | null
+  due_after?: string | null
+  due_before?: string | null
+  due_on?: string | null
+  completed_after?: string | null
+  completed_before?: string | null
+  completed_on?: string | null
+  tags?: string[]
+}
+
 export interface Page<T> {
   items: T[]
   total: number

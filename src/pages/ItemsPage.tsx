@@ -15,13 +15,38 @@ import {
   arrayMove,
 } from '@dnd-kit/sortable'
 import { fetchItems, deleteItem, reorderItem } from '../api/items'
-import { fetchTags, fetchItemIdsByTag } from '../api/tags'
-import type { Item, SortBy, Tag } from '../types'
+import { fetchTags } from '../api/tags'
+import type { Item, ItemFilter, FiltersState, SortBy, Tag } from '../types'
+import { EMPTY_FILTERS } from '../types'
 import { useAuth } from '../context/AuthContext'
 import ItemRow from '../components/ItemRow'
 import CreateItemModal from '../components/CreateItemModal'
 import AiCommandBar from '../components/AiCommandBar'
 import FilterDropdown from '../components/FilterDropdown'
+import FiltersModal from '../components/FiltersModal'
+
+function applyDateRange(
+  filter: ItemFilter,
+  start: string | null,
+  end: string | null,
+  prefix: 'created' | 'due' | 'completed',
+) {
+  if (!start && !end) return
+  if (start && end) {
+    const s = start.split('T')[0]
+    const e = end.split('T')[0]
+    if (s === e) {
+      (filter as Record<string, unknown>)[`${prefix}_on`] = s
+    } else {
+      (filter as Record<string, unknown>)[`${prefix}_after`] = start
+      ;(filter as Record<string, unknown>)[`${prefix}_before`] = end
+    }
+  } else if (start) {
+    (filter as Record<string, unknown>)[`${prefix}_after`] = start
+  } else {
+    (filter as Record<string, unknown>)[`${prefix}_before`] = end
+  }
+}
 
 const SORT_OPTIONS: { value: SortBy; label: string }[] = [
   { value: 'created_on', label: 'Created' },
@@ -48,8 +73,10 @@ export default function ItemsPage() {
   // Tag filter state
   const [availableTags, setAvailableTags] = useState<Tag[]>([])
   const [filterTagIds, setFilterTagIds] = useState<Set<number>>(new Set())
-  const [filterItemIds, setFilterItemIds] = useState<Set<number> | null>(null)
-  const [filterLoading, setFilterLoading] = useState(false)
+
+  // Advanced filter state
+  const [advancedFilter, setAdvancedFilter] = useState<FiltersState>(EMPTY_FILTERS)
+  const [showFiltersModal, setShowFiltersModal] = useState(false)
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -57,11 +84,11 @@ export default function ItemsPage() {
   )
 
   const loadItems = useCallback(
-    async (sort: SortBy, page: number, size: number) => {
+    async (sort: SortBy, page: number, size: number, filter: ItemFilter = {}) => {
       setLoading(true)
       setError('')
       try {
-        const result = await fetchItems(sort, page, size)
+        const result = await fetchItems(sort, page, size, filter)
         let list = result.items
         if (sort === 'name') {
           list = [...list].sort((a, b) => a.name.localeCompare(b.name))
@@ -85,34 +112,27 @@ export default function ItemsPage() {
     [],
   )
 
+  function buildFilter(tagIds: Set<number>, tags: Tag[], adv: FiltersState): ItemFilter {
+    const tagNames = tags.filter(t => tagIds.has(t.id!)).map(t => t.name)
+    const filter: ItemFilter = {}
+    if (tagNames.length > 0) filter.tags = tagNames
+    if (adv.name.trim()) filter.name = adv.name.trim()
+    if (adv.states.size > 0) filter.state = Array.from(adv.states)
+    if (adv.priorities.size > 0) filter.priority = Array.from(adv.priorities)
+    applyDateRange(filter, adv.createdStart, adv.createdEnd, 'created')
+    applyDateRange(filter, adv.dueStart, adv.dueEnd, 'due')
+    applyDateRange(filter, adv.completedStart, adv.completedEnd, 'completed')
+    return filter
+  }
+
   useEffect(() => {
-    loadItems(sortBy, pageNum, pageSize)
-  }, [sortBy, pageNum, pageSize, loadItems])
+    loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))
+  }, [sortBy, pageNum, pageSize, filterTagIds, availableTags, advancedFilter, loadItems])
 
   // Load all available tags once on mount
   useEffect(() => {
     fetchTags().then(tags => setAvailableTags(tags)).catch(() => {})
   }, [])
-
-  // When the active filter tags change, fetch the matching item IDs for each tag
-  // then intersect them (AND logic: item must have ALL selected tags)
-  useEffect(() => {
-    if (filterTagIds.size === 0) {
-      setFilterItemIds(null)
-      return
-    }
-    let cancelled = false
-    setFilterLoading(true)
-    Promise.all(Array.from(filterTagIds).map(tagId => fetchItemIdsByTag(tagId)))
-      .then(results => {
-        if (cancelled) return
-        const union = new Set(results.flat())
-        setFilterItemIds(union)
-      })
-      .catch(() => { if (!cancelled) setFilterItemIds(null) })
-      .finally(() => { if (!cancelled) setFilterLoading(false) })
-    return () => { cancelled = true }
-  }, [filterTagIds])
 
   function handleSortChange(s: SortBy) {
     setSortBy(s)
@@ -182,7 +202,7 @@ export default function ItemsPage() {
       await reorderItem(movedId, afterId)
     } catch (err) {
       console.error('Reorder failed, re-fetching:', err)
-      loadItems(sortBy, pageNum, pageSize)
+      loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))
     }
   }
 
@@ -194,7 +214,7 @@ export default function ItemsPage() {
       return [newItem, ...prev]  // will re-sort on next fetch; good enough for optimistic insert
     })
     // Reload to get correct order from server
-    loadItems(sortBy, pageNum, pageSize)
+    loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))
   }
 
   function toggleFilterTag(tagId: number) {
@@ -207,9 +227,15 @@ export default function ItemsPage() {
     setSelected(new Set())
   }
 
-  const displayedItems = filterItemIds !== null
-    ? items.filter(i => filterItemIds.has(i.id!))
-    : items
+  const displayedItems = items
+
+  const isFilterActive =
+    advancedFilter.name.trim() !== '' ||
+    advancedFilter.states.size > 0 ||
+    advancedFilter.priorities.size > 0 ||
+    advancedFilter.createdStart !== null || advancedFilter.createdEnd !== null ||
+    advancedFilter.dueStart !== null || advancedFilter.dueEnd !== null ||
+    advancedFilter.completedStart !== null || advancedFilter.completedEnd !== null
 
   const allSelected = displayedItems.length > 0 && selected.size === displayedItems.length
   const someSelected = selected.size > 0 && selected.size < displayedItems.length
@@ -229,7 +255,9 @@ export default function ItemsPage() {
         </div>
 
         <div className="items-header-actions">
-          <AiCommandBar onSuccess={() => loadItems(sortBy, pageNum, pageSize)} />
+          <AiCommandBar onSuccess={() => {
+            loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))
+          }} />
           <button
             className="btn-primary btn-create"
             onClick={() => setShowCreate(true)}
@@ -264,7 +292,13 @@ export default function ItemsPage() {
           onToggle={toggleFilterTag}
           onClear={() => { setFilterTagIds(new Set()); setSelected(new Set()) }}
         />
-        {filterLoading && <span className="items-filter-loading">…</span>}
+        <button
+          className={`filter-dropdown-trigger${isFilterActive ? ' filter-dropdown-trigger--active' : ''}`}
+          onClick={() => setShowFiltersModal(true)}
+        >
+          <FiltersIcon />
+          Filters{isFilterActive ? ' ·' : ''}
+        </button>
 
         <div className="items-toolbar-divider" />
         <label className="items-sort-label" htmlFor="page-size-select">Items</label>
@@ -305,7 +339,7 @@ export default function ItemsPage() {
         ) : error ? (
           <div className="items-error">
             <p>{error}</p>
-            <button className="btn-ghost btn-sm" onClick={() => loadItems(sortBy, pageNum, pageSize)}>
+            <button className="btn-ghost btn-sm" onClick={() => loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))}>
               Retry
             </button>
           </div>
@@ -338,9 +372,6 @@ export default function ItemsPage() {
               </button>
               <span className="items-list-count">
                 {displayedItems.length} item{displayedItems.length !== 1 ? 's' : ''}
-                {filterItemIds !== null && (
-                  <span className="items-list-count-filtered"> (filtered from {items.length})</span>
-                )}
               </span>
             </div>
 
@@ -398,7 +429,23 @@ export default function ItemsPage() {
       {showCreate && (
         <CreateItemModal onCreated={handleCreated} onClose={() => setShowCreate(false)} />
       )}
+
+      {showFiltersModal && (
+        <FiltersModal
+          initial={advancedFilter}
+          onApply={f => { setAdvancedFilter(f); setShowFiltersModal(false) }}
+          onClose={() => setShowFiltersModal(false)}
+        />
+      )}
     </div>
+  )
+}
+
+function FiltersIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+      <path d="M1 2.5h11M3 6.5h7M5 10.5h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
   )
 }
 

@@ -1743,6 +1743,31 @@ body {
   .items-toolbar-divider { display: none; }
 }
 
+/* ─── Filters modal ──────────────────────────────────────────────────────── */
+.filters-modal { max-width: 600px; }
+
+.filters-date-range {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.filters-date-range .modal-due-btn { flex: 1; min-width: 130px; }
+
+.filters-date-sep {
+  font-size: 13px;
+  color: var(--ink-500);
+  flex-shrink: 0;
+  padding-top: 10px;
+}
+
+.filters-datepicker { margin-top: 6px; }
+
+.modal-due-btn--open {
+  border-color: var(--amber);
+  box-shadow: 0 0 0 3px rgba(201, 149, 76, 0.15);
+}
+
 /* ─── Responsive: Very small phones (≤ 380px) ───────────────────────────── */
 @media (max-width: 380px) {
   /* Icon-only create button */
