@@ -234,7 +234,7 @@ export default function ItemsPage() {
             className="btn-primary btn-create"
             onClick={() => setShowCreate(true)}
           >
-            <PlusIcon /> New Item
+            <PlusIcon /> <span className="btn-create-label">New Item</span>
           </button>
           <button className="btn-ghost btn-sm" onClick={logout} title="Sign out">
             <SignOutIcon />

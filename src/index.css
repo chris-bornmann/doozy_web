@@ -1643,3 +1643,109 @@ body {
   from { opacity: 0; transform: translateY(-8px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ─── Responsive: Tablet (≤ 900px) ──────────────────────────────────────── */
+@media (max-width: 900px) {
+  .items-header  { padding: 16px 24px; }
+  .items-sort-bar { padding: 12px 24px; }
+  .items-main    { padding: 16px 24px 48px; }
+}
+
+/* ─── Responsive: Mobile (≤ 640px) ──────────────────────────────────────── */
+@media (max-width: 640px) {
+
+  /* Login page */
+  .login-container {
+    padding: 32px 24px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+  .login-brand-name { font-size: 28px; }
+
+  /* Items header — stack brand + actions vertically */
+  .items-header {
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 16px;
+    gap: 8px;
+  }
+  .items-header-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  .ai-command-bar { flex: 1; min-width: 0; }
+  .ai-command-input { width: auto; flex: 1; min-width: 0; }
+
+  /* Sort / filter bar */
+  .items-sort-bar { padding: 10px 16px; gap: 10px; }
+
+  /* Main content — edge-to-edge like native app */
+  .items-main { padding: 8px 0 48px; }
+
+  /* Item rows */
+  .item-row { padding: 12px 12px; }
+  /* Remove spacer so state/priority/due badges wrap below name */
+  .item-line1 { gap: 6px; }
+  .item-line1-spacer { display: none; }
+  /* Line 2: allow wrapping, hide created date */
+  .item-line2 { flex-wrap: wrap; gap: 6px; align-items: flex-start; }
+  .item-created { display: none; }
+  .item-row-tags-list { flex-wrap: wrap; }
+  .item-row-tags { flex-wrap: wrap; }
+
+  /* Modals — bottom sheet */
+  .modal-backdrop {
+    padding: 0;
+    align-items: flex-end;
+  }
+  .modal {
+    max-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    max-height: 90vh;
+  }
+
+  /* Date picker portal — pin to bottom of screen */
+  .item-datepicker-popover {
+    position: fixed !important;
+    top: auto !important;
+    right: auto !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    z-index: 9999;
+  }
+  .datepicker {
+    width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+    box-shadow: 0 -8px 40px rgba(0,0,0,0.6);
+  }
+
+  /* State dropdown portal — pin to bottom of screen */
+  .state-dropdown {
+    position: fixed !important;
+    top: auto !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    min-width: 100%;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  }
+
+  /* Touch targets — minimum 44px per Apple HIG */
+  .btn-primary, .btn-ghost, .btn-danger { min-height: 44px; }
+  .items-page-btn { width: 40px; height: 40px; }
+}
+
+/* ─── Responsive: Small phones (≤ 480px) ────────────────────────────────── */
+@media (max-width: 480px) {
+  /* Hide username to keep header compact */
+  .items-brand-sep, .items-brand-user { display: none; }
+  /* Hide toolbar dividers — flex-wrap handles spacing */
+  .items-toolbar-divider { display: none; }
+}
+
+/* ─── Responsive: Very small phones (≤ 380px) ───────────────────────────── */
+@media (max-width: 380px) {
+  /* Icon-only create button */
+  .btn-create-label { display: none; }
+  .btn-create { padding: 9px 12px; }
+}

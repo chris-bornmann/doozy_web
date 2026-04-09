@@ -3,6 +3,9 @@ import { createPortal } from 'react-dom'
 import { patchItem } from '../api/items'
 import { Priority, PRIORITY_LABELS, State, STATE_LABELS, STATE_CSS } from '../types'
 import type { Item } from '../types'
+
+const PRIORITY_CYCLE: Priority[] = [Priority.LOW, Priority.MEDIUM, Priority.HIGH]
+const STATE_CYCLE: State[] = [State.New, State.InProgress, State.Done, State.Cancelled]
 import RichTextEditor from './RichTextEditor'
 import DatePicker from './DatePicker'
 import TagEditor from './TagEditor'
@@ -57,6 +60,9 @@ export default function ItemDetailModal({ item, onUpdate, onClose }: ItemDetailM
 
     if (Object.keys(patch).length === 0) { onClose(); return }
 
+    // Optimistic update — reflect changes in the list immediately
+    onUpdate({ ...item, ...patch })
+
     setError('')
     setSaving(true)
     try {
@@ -64,6 +70,7 @@ export default function ItemDetailModal({ item, onUpdate, onClose }: ItemDetailM
       onUpdate({ ...item, ...updated })
       onClose()
     } catch (err) {
+      onUpdate(item)  // revert list to original values
       setError(err instanceof Error ? err.message : 'Save failed.')
     } finally {
       setSaving(false)
@@ -115,47 +122,42 @@ export default function ItemDetailModal({ item, onUpdate, onClose }: ItemDetailM
           </div>
 
           <div className="modal-row">
-            {/* Priority */}
+            {/* Priority — cycles HIGH → MEDIUM → LOW → HIGH */}
             <div className="modal-field modal-field--half">
               <label className="modal-label">Priority</label>
-              <div className="modal-priority-group">
-                {([Priority.HIGH, Priority.MEDIUM, Priority.LOW] as Priority[]).map(p => (
-                  <button
-                    key={p}
-                    type="button"
-                    className={[
-                      'modal-priority-btn',
-                      priority === p ? 'modal-priority-btn--active' : '',
-                      p === Priority.HIGH ? 'priority-high' :
-                      p === Priority.MEDIUM ? 'priority-medium' : 'priority-low',
-                    ].join(' ')}
-                    onClick={() => setPriority(prev => prev === p ? null : p)}
-                  >
-                    {PRIORITY_LABELS[p]}
-                  </button>
-                ))}
-              </div>
+              <button
+                type="button"
+                className={[
+                  'item-priority',
+                  priority === Priority.HIGH ? 'priority-high' :
+                  priority === Priority.MEDIUM ? 'priority-medium' :
+                  priority === Priority.LOW ? 'priority-low' : 'priority-none',
+                ].join(' ')}
+                onClick={() => {
+                  const idx = priority == null ? -1 : PRIORITY_CYCLE.indexOf(priority)
+                  setPriority(PRIORITY_CYCLE[(idx + 1) % PRIORITY_CYCLE.length])
+                }}
+                title="Click to cycle priority"
+              >
+                {priority != null ? PRIORITY_LABELS[priority] : '—'}
+              </button>
             </div>
 
-            {/* State */}
+            {/* State — cycles New → In Progress → Done → Cancelled → New */}
             <div className="modal-field modal-field--half">
               <label className="modal-label">State</label>
-              <div className="modal-state-group">
-                {([State.New, State.InProgress, State.Done, State.Cancelled] as State[]).map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    className={[
-                      'modal-state-btn',
-                      STATE_CSS[s],
-                      state === s ? 'modal-state-btn--active' : '',
-                    ].join(' ')}
-                    onClick={() => setState(s)}
-                  >
-                    {STATE_LABELS[s]}
-                  </button>
-                ))}
-              </div>
+              <button
+                type="button"
+                className={`item-state ${STATE_CSS[state]}`}
+                onClick={() => {
+                  const idx = STATE_CYCLE.indexOf(state)
+                  setState(STATE_CYCLE[(idx + 1) % STATE_CYCLE.length])
+                }}
+                title="Click to cycle state"
+              >
+                <StateIcon state={state} />
+                {STATE_LABELS[state]}
+              </button>
             </div>
           </div>
 
@@ -220,6 +222,33 @@ export default function ItemDetailModal({ item, onUpdate, onClose }: ItemDetailM
   )
 
   return createPortal(modal, document.body)
+}
+
+function StateIcon({ state }: { state: State }) {
+  if (state === State.New) return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+      <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  )
+  if (state === State.InProgress) return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+      <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M5 5V2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <path d="M5 5L7.5 6.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+  if (state === State.Done) return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+      <circle cx="5" cy="5" r="4" fill="currentColor" opacity="0.2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M3 5l1.5 1.5L7 3.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+  return (
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+      <circle cx="5" cy="5" r="4" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M3.5 3.5l3 3M6.5 3.5l-3 3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
 }
 
 function CalendarIcon() {
