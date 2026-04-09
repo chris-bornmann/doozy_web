@@ -25,7 +25,7 @@ function formatDate(iso: string | null | undefined): string {
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-const PRIORITY_CYCLE: Priority[] = [Priority.HIGH, Priority.MEDIUM, Priority.LOW]
+const PRIORITY_CYCLE: Priority[] = [Priority.LOW, Priority.MEDIUM, Priority.HIGH]
 const ALL_STATES: State[] = [State.New, State.InProgress, State.Done, State.Cancelled]
 
 type EditingField = null | 'name' | 'description' | 'priority' | 'due_on' | 'state'
@@ -326,13 +326,15 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, sort
           item={item}
           onUpdate={updated => {
             onUpdate(updated)
-            setShowDetail(false)
-            // Re-fetch tags in case they were changed in the modal
-            fetchItemTags(id).then(tags => setRowTags(tags)).catch(() => {})
+            // Sync local display state — useState doesn't re-init from prop changes
+            setNameValue(updated.name)
+            setDescValue(updated.description ?? '')
+            setPriorityValue(updated.priority ?? null)
+            setStateValue(updated.state ?? State.New)
+            setDueValue(updated.due_on ?? null)
           }}
           onClose={() => {
             setShowDetail(false)
-            // Tags may have been changed without hitting OK
             fetchItemTags(id).then(tags => setRowTags(tags)).catch(() => {})
           }}
         />
