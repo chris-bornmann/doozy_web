@@ -74,7 +74,7 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
 ]
 
 export default function ItemsPage() {
-  const { user, logout } = useAuth()
+  const { user, logout, can } = useAuth()
   const [items, setItems] = useState<Item[]>([])
   const [sortBy, setSortBy] = useState<SortBy>('created_on')
   const [selected, setSelected] = useState<Set<number>>(new Set())
@@ -271,20 +271,22 @@ export default function ItemsPage() {
         </div>
 
         <div className="items-header-actions">
-          <AiCommandBar onResult={(result: AiResponse) => {
+          {can('ai', 'use') && <AiCommandBar onResult={(result: AiResponse) => {
             if (result.operation === 'list' && result.filter) {
               setAdvancedFilter(itemFilterToFiltersState(result.filter))
             } else {
               loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))
             }
-          }} />
+          }} />}
           <button
             className="btn-primary btn-create"
             onClick={() => setShowCreate(true)}
           >
             <PlusIcon /> <span className="btn-create-label">New Item</span>
           </button>
-          <Link to="/rbac" className="btn-ghost btn-sm">Roles</Link>
+          {(can('rbac', 'read') || can('rbac', 'write') || can('rbac', 'delete')) && (
+            <Link to="/rbac" className="btn-ghost btn-sm">Roles</Link>
+          )}
           <button className="btn-ghost btn-sm" onClick={logout} title="Sign out">
             <SignOutIcon />
           </button>
