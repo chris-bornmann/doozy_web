@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { Link } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
@@ -283,6 +284,7 @@ export default function ItemsPage() {
           >
             <PlusIcon /> <span className="btn-create-label">New Item</span>
           </button>
+          <Link to="/rbac" className="btn-ghost btn-sm">Roles</Link>
           <button className="btn-ghost btn-sm" onClick={logout} title="Sign out">
             <SignOutIcon />
           </button>
