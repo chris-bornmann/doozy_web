@@ -110,6 +110,8 @@ export interface ItemFilter {
   tags?: string[]
 }
 
+export type Permissions = Record<string, string[]>
+
 export interface UserRolesSummary {
   user_id: number
   username: string

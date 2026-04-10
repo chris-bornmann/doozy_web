@@ -1,5 +1,9 @@
 import { apiFetch } from './client'
-import type { UserRolesSummary } from '../types'
+import type { Permissions, UserRolesSummary } from '../types'
+
+export function fetchMyPermissions(): Promise<Permissions> {
+  return apiFetch<Permissions>('/rbac/me/permissions')
+}
 
 export function fetchUserRoles(): Promise<UserRolesSummary[]> {
   return apiFetch<UserRolesSummary[]>('/rbac/')

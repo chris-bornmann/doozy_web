@@ -15,7 +15,9 @@ function SignOutIcon() {
 }
 
 export default function RbacPage() {
-  const { user, logout } = useAuth()
+  const { user, logout, can } = useAuth()
+  const canWrite = can('rbac', 'write')
+  const canDelete = can('rbac', 'delete')
   const [users, setUsers] = useState<UserRolesSummary[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -101,7 +103,7 @@ export default function RbacPage() {
               <tr style={{ borderBottom: '1px solid var(--ink-800)' }}>
                 <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: 12, color: 'var(--ink-400)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>User</th>
                 <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: 12, color: 'var(--ink-400)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Roles</th>
-                <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: 12, color: 'var(--ink-400)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Add Role</th>
+                {canWrite && <th style={{ textAlign: 'left', padding: '8px 12px', fontSize: 12, color: 'var(--ink-400)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase' }}>Add Role</th>}
               </tr>
             </thead>
             <tbody>
@@ -118,19 +120,21 @@ export default function RbacPage() {
                       {u.roles.map(role => (
                         <span key={role} className="tag-pill">
                           {role}
-                          <button
-                            className="tag-pill-remove"
-                            title={`Remove ${role}`}
-                            disabled={saving[`remove-${u.user_id}-${role}`]}
-                            onClick={() => handleRemove(u.user_id, role)}
-                          >
-                            ×
-                          </button>
+                          {canDelete && (
+                            <button
+                              className="tag-pill-remove"
+                              title={`Remove ${role}`}
+                              disabled={saving[`remove-${u.user_id}-${role}`]}
+                              onClick={() => handleRemove(u.user_id, role)}
+                            >
+                              ×
+                            </button>
+                          )}
                         </span>
                       ))}
                     </div>
                   </td>
-                  <td style={{ padding: '12px', verticalAlign: 'middle' }}>
+                  {canWrite && <td style={{ padding: '12px', verticalAlign: 'middle' }}>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                       <input
                         className="field-input"
@@ -149,7 +153,7 @@ export default function RbacPage() {
                         Add
                       </button>
                     </div>
-                  </td>
+                  </td>}
                 </tr>
               ))}
             </tbody>
