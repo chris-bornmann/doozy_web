@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from './context/AuthContext'
 import { setToken } from './api/client'
 import LoginPage from './pages/LoginPage'
 import ItemsPage from './pages/ItemsPage'
+import RbacPage from './pages/RbacPage'
 
 // Handles the OAuth callback redirect from the backend.
 // The backend should redirect to /auth/callback?token=<jwt>
@@ -90,6 +91,14 @@ function AppRoutes() {
         element={
           <ProtectedRoute>
             <ItemsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/rbac"
+        element={
+          <ProtectedRoute>
+            <RbacPage />
           </ProtectedRoute>
         }
       />

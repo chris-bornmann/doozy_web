@@ -110,6 +110,12 @@ export interface ItemFilter {
   tags?: string[]
 }
 
+export interface UserRolesSummary {
+  user_id: number
+  username: string
+  roles: string[]
+}
+
 export interface Page<T> {
   items: T[]
   total: number

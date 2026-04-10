@@ -1,0 +1,57 @@
+/* ─── Doozy colour tokens ─────────────────────────────────────────────────── */
+/* All colours live here. Edit this file to retheme the entire app.          */
+:root {
+
+  /* ── Neutral surface & text ────────────────────────────────────────────── */
+  --surface:        #FFFFFF;   /* main page background                        */
+  --surface-alt:    #F7F8FA;   /* header, sort-bar, subtle section bg         */
+  --surface-hover:  #EFF1F5;   /* hover state on rows / items                 */
+  --surface-raised: #FFFFFF;   /* modals, dropdowns, popovers                 */
+
+  --border:         #E2E6EC;   /* default border colour                       */
+  --border-strong:  #C4CDD7;   /* dividers, stronger borders                  */
+
+  --text:           #111318;   /* primary body text                           */
+  --text-2:         #4A5568;   /* secondary (descriptions, labels)            */
+  --text-3:         #8A95A3;   /* muted / placeholder / disabled              */
+
+  /* ── Primary action colour ─────────────────────────────────────────────── */
+  /* Used for: CTA buttons, selected state, focus rings, active filters       */
+  --primary:        #0C6FF9;
+  --primary-hover:  #0558D6;
+  --primary-light:  #4090FB;
+  --primary-muted:  #EBF3FF;   /* very-light tint (selected rows, active bg) */
+  --primary-border: #B3D4FD;   /* border that pairs with --primary-muted      */
+
+  /* ── Danger (errors, delete, overdue accent) ────────────────────────────── */
+  --danger:         #DC2626;
+  --danger-hover:   #B91C1C;
+  --danger-light:   #EF4444;
+  --danger-muted:   #FEF2F2;
+  --danger-border:  #FECACA;
+
+  /* ── Warning (amber — in-progress state, medium priority, due-soon) ─────── */
+  --warning:        #D97706;
+  --warning-light:  #F59E0B;
+  --warning-muted:  #FFFBEB;
+  --warning-border: #FDE68A;
+
+  /* ── Success (green — done state, low priority) ─────────────────────────── */
+  --success:        #16A34A;
+  --success-light:  #22C55E;
+  --success-muted:  #F0FDF4;
+  --success-border: #BBF7D0;
+
+  /* ── Row-level urgency indicators (left stripe + bg tint) ──────────────── */
+  --overdue-stripe:  #EF4444;
+  --overdue-bg:      rgba(239, 68, 68, 0.06);
+  --due-soon-stripe: #F59E0B;
+  --due-soon-bg:     rgba(245, 158, 11, 0.07);
+
+  /* ── Overlay / backdrop ─────────────────────────────────────────────────── */
+  --overlay: rgba(17, 19, 24, 0.50);
+
+  /* ── Shape ──────────────────────────────────────────────────────────────── */
+  --radius:    6px;
+  --radius-lg: 10px;
+}
