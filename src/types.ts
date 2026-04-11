@@ -112,6 +112,21 @@ export interface ItemFilter {
 
 export type Permissions = Record<string, string[]>
 
+export interface FriendshipRead {
+  id: number
+  requester: string
+  addressee: string
+  status: number  // 0=pending, 1=accepted, 2=declined
+  created_on: string
+  updated_on: string | null
+}
+
+export interface FriendUser {
+  id: number | null  // friendship id — used for DELETE
+  username: string
+  full_name: string | null
+}
+
 export interface UserRolesSummary {
   user_id: number
   username: string

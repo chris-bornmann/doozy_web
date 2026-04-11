@@ -2,12 +2,14 @@ import React, { createContext, useContext, useEffect, useState, useCallback } fr
 import { getToken, clearToken } from '../api/client'
 import { fetchCurrentUser } from '../api/auth'
 import { fetchMyPermissions } from '../api/rbac'
+import { fetchPendingRequests } from '../api/friends'
 import type { User, Permissions } from '../types'
 
 interface AuthContextValue {
   user: User | null
   token: string | null
   permissions: Permissions
+  pendingFriendCount: number
   loading: boolean
   can: (resource: string, action: string) => boolean
   logout: () => void
@@ -20,18 +22,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [token, setToken_] = useState<string | null>(getToken)
   const [permissions, setPermissions] = useState<Permissions>({})
+  const [pendingFriendCount, setPendingFriendCount] = useState(0)
   const [loading, setLoading] = useState(true)
 
   const refreshUser = useCallback(async () => {
     try {
-      const [me, perms] = await Promise.all([fetchCurrentUser(), fetchMyPermissions()])
+      const [me, perms, pending] = await Promise.all([
+        fetchCurrentUser(),
+        fetchMyPermissions(),
+        fetchPendingRequests(),
+      ])
       setUser(me)
       setPermissions(perms)
+      setPendingFriendCount(pending.length)
     } catch {
       clearToken()
       setToken_(null)
       setUser(null)
       setPermissions({})
+      setPendingFriendCount(0)
     }
   }, [])
 
@@ -56,6 +65,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken_(null)
     setUser(null)
     setPermissions({})
+    setPendingFriendCount(0)
   }, [])
 
   const can = useCallback(
@@ -64,7 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <AuthContext.Provider value={{ user, token, permissions, loading, can, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, permissions, pendingFriendCount, loading, can, logout, refreshUser }}>
       {children}
     </AuthContext.Provider>
   )
