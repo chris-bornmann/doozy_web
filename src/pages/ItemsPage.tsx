@@ -285,6 +285,7 @@ export default function ItemsPage() {
             <PlusIcon /> <span className="btn-create-label">New Item</span>
           </button>
           <Link to="/friends" className="btn-ghost btn-sm">Friends</Link>
+          <Link to="/groups" className="btn-ghost btn-sm">Groups</Link>
           {(can('rbac', 'read') || can('rbac', 'write') || can('rbac', 'delete')) && (
             <Link to="/rbac" className="btn-ghost btn-sm">Roles</Link>
           )}

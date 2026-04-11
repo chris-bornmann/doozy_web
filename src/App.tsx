@@ -6,6 +6,7 @@ import LoginPage from './pages/LoginPage'
 import ItemsPage from './pages/ItemsPage'
 import RbacPage from './pages/RbacPage'
 import FriendsPage from './pages/FriendsPage'
+import GroupsPage from './pages/GroupsPage'
 
 // Handles the OAuth callback redirect from the backend.
 // The backend should redirect to /auth/callback?token=<jwt>
@@ -162,6 +163,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <FriendsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/groups"
+          element={
+            <ProtectedRoute>
+              <GroupsPage />
             </ProtectedRoute>
           }
         />

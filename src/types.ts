@@ -112,6 +112,14 @@ export interface ItemFilter {
 
 export type Permissions = Record<string, string[]>
 
+export interface GroupRead {
+  id: number
+  name: string
+  owner: string
+  members: string[]
+  created_on: string
+}
+
 export interface FriendshipRead {
   id: number
   requester: string
