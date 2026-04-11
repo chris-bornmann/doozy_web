@@ -1,10 +1,11 @@
-import { useEffect } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { setToken } from './api/client'
 import LoginPage from './pages/LoginPage'
 import ItemsPage from './pages/ItemsPage'
 import RbacPage from './pages/RbacPage'
+import FriendsPage from './pages/FriendsPage'
 
 // Handles the OAuth callback redirect from the backend.
 // The backend should redirect to /auth/callback?token=<jwt>
@@ -50,6 +51,58 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return user ? <>{children}</> : <Navigate to="/login" replace />
 }
 
+function PendingFriendsToast() {
+  const { pendingFriendCount, loading } = useAuth()
+  const [visible, setVisible] = useState(false)
+
+  useEffect(() => {
+    if (!loading && pendingFriendCount > 0) {
+      setVisible(true)
+      const t = setTimeout(() => setVisible(false), 5000)
+      return () => clearTimeout(t)
+    }
+  }, [loading]) // intentionally only fire once after loading completes
+
+  if (!visible) return null
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top: 20,
+      right: 20,
+      zIndex: 1000,
+      background: 'var(--ink-800)',
+      border: '1px solid var(--ink-700)',
+      borderRadius: 8,
+      padding: '12px 16px',
+      display: 'flex',
+      alignItems: 'center',
+      gap: 12,
+      fontSize: 14,
+      color: 'var(--ink-200)',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.4)',
+    }}>
+      <span>
+        You have {pendingFriendCount} pending friend request{pendingFriendCount !== 1 ? 's' : ''}.
+      </span>
+      <Link
+        to="/friends"
+        className="btn-primary btn-sm"
+        onClick={() => setVisible(false)}
+      >
+        View
+      </Link>
+      <button
+        className="btn-ghost btn-sm"
+        onClick={() => setVisible(false)}
+        style={{ padding: '4px 8px' }}
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
+
 function AppRoutes() {
   const { user, loading, refreshUser } = useAuth()
 
@@ -81,30 +134,41 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
-      <Route
-        path="/login"
-        element={user ? <Navigate to="/items" replace /> : <LoginPage />}
-      />
-      <Route
-        path="/items"
-        element={
-          <ProtectedRoute>
-            <ItemsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/rbac"
-        element={
-          <ProtectedRoute>
-            <RbacPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/auth/callback" element={<OAuthCallback />} />
-      <Route path="*" element={<Navigate to={user ? '/items' : '/login'} replace />} />
-    </Routes>
+    <>
+      <PendingFriendsToast />
+      <Routes>
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/items" replace /> : <LoginPage />}
+        />
+        <Route
+          path="/items"
+          element={
+            <ProtectedRoute>
+              <ItemsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/rbac"
+          element={
+            <ProtectedRoute>
+              <RbacPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/friends"
+          element={
+            <ProtectedRoute>
+              <FriendsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="/auth/callback" element={<OAuthCallback />} />
+        <Route path="*" element={<Navigate to={user ? '/items' : '/login'} replace />} />
+      </Routes>
+    </>
   )
 }
 
