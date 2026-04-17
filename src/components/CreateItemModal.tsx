@@ -1,12 +1,11 @@
 import { useState, useEffect, useRef, FormEvent } from 'react'
 import { createItem } from '../api/items'
 import { Priority, PRIORITY_LABELS } from '../types'
-import type { Item } from '../types'
 import RichTextEditor from './RichTextEditor'
 import DatePicker from './DatePicker'
 
 interface CreateItemModalProps {
-  onCreated: (item: Item) => void
+  onCreated: () => void
   onClose: () => void
 }
 
@@ -53,17 +52,8 @@ export default function CreateItemModal({ onCreated, onClose }: CreateItemModalP
     setSaving(true)
     try {
       const plainDesc = htmlToPlainText(description) || null
-      const result = await createItem(trimmed, plainDesc, priority, dueOn)
-      const newItem: Item = {
-        id: result.id,
-        name: trimmed,
-        description: plainDesc,
-        priority,
-        creator_id: 0,
-        created_on: new Date().toISOString(),
-        due_on: dueOn,
-      }
-      onCreated(newItem)
+      await createItem(trimmed, plainDesc, priority, dueOn)
+      onCreated()
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to create item')
     } finally {

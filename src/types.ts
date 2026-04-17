@@ -46,10 +46,18 @@ export interface Item {
   priority?: Priority | null
   state?: State | null
   creator_id: number
+  owner?: string | null       // username of current owner (defaults to creator)
+  group_id?: number | null    // group this item is assigned to, if any
   created_on: string
   due_on?: string | null
   completed_on?: string | null
   updated_on?: string | null
+}
+
+export interface ItemRead extends Item {
+  id: number           // always present in API responses
+  owner: string        // always present — defaults to creator's username
+  group_id: number | null  // always present — null if no group assigned
 }
 
 export interface Token {
@@ -80,6 +88,7 @@ export interface FiltersState {
   dueEnd: string | null
   completedStart: string | null
   completedEnd: string | null
+  groupIds: number[]
 }
 
 export const EMPTY_FILTERS: FiltersState = {
@@ -92,6 +101,7 @@ export const EMPTY_FILTERS: FiltersState = {
   dueEnd: null,
   completedStart: null,
   completedEnd: null,
+  groupIds: [],
 }
 
 export interface ItemFilter {
@@ -108,6 +118,7 @@ export interface ItemFilter {
   completed_before?: string | null
   completed_on?: string | null
   tags?: string[]
+  group_ids?: number[]
 }
 
 export type Permissions = Record<string, string[]>

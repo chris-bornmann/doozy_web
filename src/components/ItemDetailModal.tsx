@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
-import { patchItem } from '../api/items'
+import { patchItem, assignToUser, assignToGroup, unassignGroup } from '../api/items'
 import { Priority, PRIORITY_LABELS, State, STATE_LABELS, STATE_CSS } from '../types'
-import type { Item } from '../types'
+import type { Item, ItemRead, GroupRead, FriendUser } from '../types'
+import { useAuth } from '../context/useAuth'
 
 const PRIORITY_CYCLE: Priority[] = [Priority.LOW, Priority.MEDIUM, Priority.HIGH]
 const STATE_CYCLE: State[] = [State.New, State.InProgress, State.Done, State.Cancelled]
@@ -11,9 +12,12 @@ import DatePicker from './DatePicker'
 import TagEditor from './TagEditor'
 
 interface ItemDetailModalProps {
-  item: Item
-  onUpdate: (updated: Item) => void
+  item: ItemRead
+  onUpdate: (updated: ItemRead) => void
+  onRemove: () => void
   onClose: () => void
+  myGroups?: GroupRead[]
+  myFriends?: FriendUser[]
 }
 
 function formatDate(iso: string | null | undefined): string {
@@ -21,7 +25,8 @@ function formatDate(iso: string | null | undefined): string {
   return new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
-export default function ItemDetailModal({ item, onUpdate, onClose }: ItemDetailModalProps) {
+export default function ItemDetailModal({ item, onUpdate, onRemove, onClose, myGroups = [], myFriends = [] }: ItemDetailModalProps) {
+  const { user } = useAuth()
   const [name, setName] = useState(item.name)
   const [description, setDescription] = useState(item.description ?? '')
   const [priority, setPriority] = useState<Priority | null>(item.priority ?? null)
@@ -31,6 +36,17 @@ export default function ItemDetailModal({ item, onUpdate, onClose }: ItemDetailM
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const nameRef = useRef<HTMLInputElement>(null)
+
+  // Assignment state
+  const [localOwner, setLocalOwner] = useState(item.owner)
+  const [localGroupId, setLocalGroupId] = useState(item.group_id)
+
+  const isOwner = user?.username === item.owner
+  const currentGroup = myGroups.find(g => g.id === localGroupId) ?? null
+  const eligibleUsers = myFriends.filter(f => {
+    if (currentGroup) return currentGroup.members.includes(f.username)
+    return true
+  })
 
   useEffect(() => {
     nameRef.current?.focus()
@@ -58,16 +74,36 @@ export default function ItemDetailModal({ item, onUpdate, onClose }: ItemDetailM
     if (state !== (item.state ?? State.New)) patch.state = state
     if (dueOn !== (item.due_on ?? null)) patch.due_on = dueOn
 
-    if (Object.keys(patch).length === 0) { onClose(); return }
-
-    // Optimistic update — reflect changes in the list immediately
-    onUpdate({ ...item, ...patch })
+    const groupChanged = localGroupId !== item.group_id
+    const ownerChanged = localOwner !== item.owner
+    if (Object.keys(patch).length === 0 && !groupChanged && !ownerChanged) { onClose(); return }
 
     setError('')
     setSaving(true)
     try {
-      const updated = await patchItem(item.id!, patch)
-      onUpdate({ ...item, ...updated })
+      let updated: ItemRead = item
+      if (Object.keys(patch).length > 0) {
+        onUpdate({ ...item, ...patch })  // optimistic update for field changes
+        updated = await patchItem(item.id!, patch)
+      }
+      if (groupChanged) {
+        if (localGroupId !== null) await assignToGroup(item.id!, localGroupId)
+        else await unassignGroup(item.id!)
+      }
+      if (ownerChanged) {
+        await assignToUser(item.id!, localOwner)
+      }
+      // If ownership moved to someone else and the item is not in a group
+      // the current user belongs to, it should no longer appear in their list.
+      const userLostAccess =
+        ownerChanged &&
+        localOwner !== user?.username &&
+        !myGroups.some(g => g.id === localGroupId)
+      if (userLostAccess) {
+        onRemove()
+      } else {
+        onUpdate({ ...updated, group_id: localGroupId, owner: localOwner })
+      }
       onClose()
     } catch (err) {
       onUpdate(item)  // revert list to original values
@@ -198,6 +234,42 @@ export default function ItemDetailModal({ item, onUpdate, onClose }: ItemDetailM
           <div className="modal-field">
             <label className="modal-label">Tags</label>
             <TagEditor itemId={item.id!} />
+          </div>
+
+          {/* Assignment */}
+          <div className="modal-field">
+            <label className="modal-label">Owner</label>
+            {isOwner && eligibleUsers.length > 0 ? (
+              <select
+                className="field-input"
+                value={localOwner}
+                onChange={e => setLocalOwner(e.target.value)}
+              >
+                <option value={item.owner}>{item.owner}</option>
+                {eligibleUsers.map(f => (
+                  <option key={f.username} value={f.username}>{f.username}</option>
+                ))}
+              </select>
+            ) : (
+              <p className="modal-readonly">{localOwner}</p>
+            )}
+          </div>
+          <div className="modal-field">
+            <label className="modal-label">Group</label>
+            {isOwner && myGroups.length > 0 ? (
+              <select
+                className="field-input"
+                value={localGroupId ?? ''}
+                onChange={e => setLocalGroupId(e.target.value === '' ? null : Number(e.target.value))}
+              >
+                <option value="">None</option>
+                {myGroups.map(g => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            ) : (
+              <p className="modal-readonly">{currentGroup?.name ?? 'None'}</p>
+            )}
           </div>
 
           {/* Read-only created date */}
