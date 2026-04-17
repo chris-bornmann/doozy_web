@@ -1706,6 +1706,33 @@ body {
 }
 .ai-command-submit:disabled { opacity: 0.4; cursor: not-allowed; }
 
+.ai-command-record {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: none;
+  border-left: 1px solid var(--border);
+  color: var(--text-3);
+  cursor: pointer;
+  transition: color 0.12s, background 0.12s;
+}
+.ai-command-record:hover:not(:disabled) {
+  color: var(--primary);
+  background: var(--primary-muted);
+}
+.ai-command-record:disabled { opacity: 0.4; cursor: not-allowed; }
+.ai-command-record--active {
+  color: var(--danger);
+  animation: pulse-rec 0.8s ease-in-out infinite;
+}
+@keyframes pulse-rec {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.45; }
+}
+
 .btn-spinner--amber {
   width: 13px;
   height: 13px;
