@@ -88,7 +88,7 @@ export default function FiltersModal({ initial, onApply, onClose }: FiltersModal
   }
 
   function handleApply() {
-    onApply({ name, states, priorities, createdStart, createdEnd, dueStart, dueEnd, completedStart, completedEnd })
+    onApply({ name, states, priorities, createdStart, createdEnd, dueStart, dueEnd, completedStart, completedEnd, groupIds: [] })
   }
 
   function togglePicker(field: DateField) {

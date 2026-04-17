@@ -2,7 +2,7 @@ import { useState, useRef, useCallback, useEffect, useLayoutEffect, KeyboardEven
 import { createPortal } from 'react-dom'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Item, Tag } from '../types'
+import type { Item, ItemRead, Tag, GroupRead, FriendUser } from '../types'
 import { Priority, PRIORITY_LABELS, State, STATE_LABELS, STATE_CSS } from '../types'
 import { patchItem } from '../api/items'
 import { fetchItemTags } from '../api/tags'
@@ -12,11 +12,14 @@ import RichTextEditor from './RichTextEditor'
 import ItemDetailModal from './ItemDetailModal'
 
 interface ItemRowProps {
-  item: Item
+  item: ItemRead
   selected: boolean
   onToggleSelect: (id: number) => void
-  onUpdate: (updated: Item) => void
+  onUpdate: (updated: ItemRead) => void
+  onRemove: (id: number) => void
   sortable: boolean
+  myGroups?: GroupRead[]
+  myFriends?: FriendUser[]
 }
 
 function formatDate(iso: string | null | undefined): string {
@@ -30,7 +33,7 @@ const ALL_STATES: State[] = [State.New, State.InProgress, State.Done, State.Canc
 
 type EditingField = null | 'name' | 'description' | 'priority' | 'due_on' | 'state'
 
-export default function ItemRow({ item, selected, onToggleSelect, onUpdate, sortable }: ItemRowProps) {
+export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRemove, sortable, myGroups, myFriends }: ItemRowProps) {
   const id = item.id!
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
@@ -327,6 +330,9 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, sort
       {showDetail && (
         <ItemDetailModal
           item={item}
+          myGroups={myGroups}
+          myFriends={myFriends}
+          onRemove={() => onRemove(id)}
           onUpdate={updated => {
             onUpdate(updated)
             // Sync local display state — useState doesn't re-init from prop changes

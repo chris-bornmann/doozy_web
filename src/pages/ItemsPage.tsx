@@ -17,8 +17,10 @@ import {
 } from '@dnd-kit/sortable'
 import { fetchItems, deleteItem, reorderItem } from '../api/items'
 import { fetchTags } from '../api/tags'
+import { fetchGroups } from '../api/groups'
+import { fetchFriends } from '../api/friends'
 import type { AiResponse } from '../api/ai'
-import type { Item, ItemFilter, FiltersState, SortBy, Tag } from '../types'
+import type { ItemRead, ItemFilter, FiltersState, SortBy, Tag, GroupRead, FriendUser } from '../types'
 import { EMPTY_FILTERS } from '../types'
 import { useAuth } from '../context/AuthContext'
 import ItemRow from '../components/ItemRow'
@@ -38,6 +40,7 @@ function itemFilterToFiltersState(f: ItemFilter): FiltersState {
     dueEnd:       f.due_before ?? f.due_on ?? null,
     completedStart: f.completed_after ?? f.completed_on ?? null,
     completedEnd:   f.completed_before ?? f.completed_on ?? null,
+    groupIds: f.group_ids ?? [],
   }
 }
 
@@ -75,7 +78,7 @@ const SORT_OPTIONS: { value: SortBy; label: string }[] = [
 
 export default function ItemsPage() {
   const { user, logout, can } = useAuth()
-  const [items, setItems] = useState<Item[]>([])
+  const [items, setItems] = useState<ItemRead[]>([])
   const [sortBy, setSortBy] = useState<SortBy>('created_on')
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
@@ -89,6 +92,11 @@ export default function ItemsPage() {
   // Tag filter state
   const [availableTags, setAvailableTags] = useState<Tag[]>([])
   const [filterTagIds, setFilterTagIds] = useState<Set<number>>(new Set())
+
+  // Groups + friends (for filter dropdown and item assignment)
+  const [myGroups, setMyGroups] = useState<GroupRead[]>([])
+  const [myFriends, setMyFriends] = useState<FriendUser[]>([])
+  const [filterGroupIds, setFilterGroupIds] = useState<Set<number>>(new Set())
 
   // Advanced filter state
   const [advancedFilter, setAdvancedFilter] = useState<FiltersState>(EMPTY_FILTERS)
@@ -128,10 +136,11 @@ export default function ItemsPage() {
     [],
   )
 
-  function buildFilter(tagIds: Set<number>, tags: Tag[], adv: FiltersState): ItemFilter {
+  function buildFilter(tagIds: Set<number>, tags: Tag[], adv: FiltersState, groupIds: Set<number>): ItemFilter {
     const tagNames = tags.filter(t => tagIds.has(t.id!)).map(t => t.name)
     const filter: ItemFilter = {}
     if (tagNames.length > 0) filter.tags = tagNames
+    if (groupIds.size > 0) filter.group_ids = Array.from(groupIds)
     if (adv.name.trim()) filter.name = adv.name.trim()
     if (adv.states.size > 0) filter.state = Array.from(adv.states)
     if (adv.priorities.size > 0) filter.priority = Array.from(adv.priorities)
@@ -142,12 +151,14 @@ export default function ItemsPage() {
   }
 
   useEffect(() => {
-    loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))
-  }, [sortBy, pageNum, pageSize, filterTagIds, availableTags, advancedFilter, loadItems])
+    loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))
+  }, [sortBy, pageNum, pageSize, filterTagIds, availableTags, advancedFilter, filterGroupIds, loadItems])
 
-  // Load all available tags once on mount
+  // Load tags, groups, and friends once on mount
   useEffect(() => {
     fetchTags().then(tags => setAvailableTags(tags)).catch(() => {})
+    fetchGroups().then(g => setMyGroups(g)).catch(() => {})
+    fetchFriends().then(f => setMyFriends(f)).catch(() => {})
   }, [])
 
   function handleSortChange(s: SortBy) {
@@ -179,8 +190,13 @@ export default function ItemsPage() {
     }
   }
 
-  function handleItemUpdate(updated: Item) {
+  function handleItemUpdate(updated: ItemRead) {
     setItems(prev => prev.map(i => i.id === updated.id ? { ...i, ...updated } : i))
+  }
+
+  function handleItemRemove(id: number) {
+    setItems(prev => prev.filter(i => i.id !== id))
+    setSelected(prev => { const next = new Set(prev); next.delete(id); return next })
   }
 
   async function handleDeleteSelected() {
@@ -218,19 +234,13 @@ export default function ItemsPage() {
       await reorderItem(movedId, afterId)
     } catch (err) {
       console.error('Reorder failed, re-fetching:', err)
-      loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))
+      loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))
     }
   }
 
-  function handleCreated(newItem: Item) {
+  function handleCreated() {
     setShowCreate(false)
-    // Insert at the position appropriate for current sort
-    setItems(prev => {
-      if (sortBy === 'custom') return [newItem, ...prev]
-      return [newItem, ...prev]  // will re-sort on next fetch; good enough for optimistic insert
-    })
-    // Reload to get correct order from server
-    loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))
+    loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))
   }
 
   function toggleFilterTag(tagId: number) {
@@ -238,6 +248,16 @@ export default function ItemsPage() {
       const next = new Set(prev)
       if (next.has(tagId)) next.delete(tagId)
       else next.add(tagId)
+      return next
+    })
+    setSelected(new Set())
+  }
+
+  function toggleFilterGroup(groupId: number) {
+    setFilterGroupIds(prev => {
+      const next = new Set(prev)
+      if (next.has(groupId)) next.delete(groupId)
+      else next.add(groupId)
       return next
     })
     setSelected(new Set())
@@ -275,7 +295,7 @@ export default function ItemsPage() {
             if (result.operation === 'list' && result.filter) {
               setAdvancedFilter(itemFilterToFiltersState(result.filter))
             } else {
-              loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))
+              loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))
             }
           }} />}
           <button
@@ -317,6 +337,15 @@ export default function ItemsPage() {
           onToggle={toggleFilterTag}
           onClear={() => { setFilterTagIds(new Set()); setSelected(new Set()) }}
         />
+        {myGroups.length > 0 && (
+          <FilterDropdown
+            label="Group"
+            options={myGroups.map(g => ({ id: g.id, label: g.name }))}
+            selected={filterGroupIds}
+            onToggle={toggleFilterGroup}
+            onClear={() => { setFilterGroupIds(new Set()); setSelected(new Set()) }}
+          />
+        )}
         <button
           className={`filter-dropdown-trigger${isFilterActive ? ' filter-dropdown-trigger--active' : ''}`}
           onClick={() => setShowFiltersModal(true)}
@@ -364,7 +393,7 @@ export default function ItemsPage() {
         ) : error ? (
           <div className="items-error">
             <p>{error}</p>
-            <button className="btn-ghost btn-sm" onClick={() => loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter))}>
+            <button className="btn-ghost btn-sm" onClick={() => loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))}>
               Retry
             </button>
           </div>
@@ -417,7 +446,10 @@ export default function ItemsPage() {
                       selected={selected.has(item.id!)}
                       onToggleSelect={toggleSelect}
                       onUpdate={handleItemUpdate}
+                      onRemove={handleItemRemove}
                       sortable={isCustomSort}
+                      myGroups={myGroups}
+                      myFriends={myFriends}
                     />
                   </div>
                 ))}
