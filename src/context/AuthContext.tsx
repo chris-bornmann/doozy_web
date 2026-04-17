@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
+import React, { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { getToken, clearToken } from '../api/client'
 import { fetchCurrentUser } from '../api/auth'
 import { fetchMyPermissions } from '../api/rbac'
@@ -11,9 +11,11 @@ interface AuthContextValue {
   permissions: Permissions
   pendingFriendCount: number
   loading: boolean
+  sessionExpired: boolean
   can: (resource: string, action: string) => boolean
   logout: () => void
   refreshUser: () => Promise<void>
+  clearSessionExpired: () => void
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -24,6 +26,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [permissions, setPermissions] = useState<Permissions>({})
   const [pendingFriendCount, setPendingFriendCount] = useState(0)
   const [loading, setLoading] = useState(true)
+  const [sessionExpired, setSessionExpired] = useState(false)
+  const userRef = useRef(user)
 
   const refreshUser = useCallback(async () => {
     try {
@@ -60,12 +64,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [token])
 
+  // Keep ref current so the auth:expired handler can check without a stale closure
+  useEffect(() => {
+    userRef.current = user
+  }, [user])
+
+  useEffect(() => {
+    const handler = () => {
+      if (userRef.current !== null) setSessionExpired(true)
+    }
+    window.addEventListener('auth:expired', handler)
+    return () => window.removeEventListener('auth:expired', handler)
+  }, [])
+
+  const clearSessionExpired = useCallback(() => setSessionExpired(false), [])
+
   const logout = useCallback(() => {
     clearToken()
     setToken_(null)
     setUser(null)
     setPermissions({})
     setPendingFriendCount(0)
+    setSessionExpired(false)
   }, [])
 
   const can = useCallback(
@@ -74,7 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   )
 
   return (
-    <AuthContext.Provider value={{ user, token, permissions, pendingFriendCount, loading, can, logout, refreshUser }}>
+    <AuthContext.Provider value={{ user, token, permissions, pendingFriendCount, loading, sessionExpired, can, logout, refreshUser, clearSessionExpired }}>
       {children}
     </AuthContext.Provider>
   )

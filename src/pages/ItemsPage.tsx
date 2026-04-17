@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react'
-import { Link } from 'react-router-dom'
 import {
   DndContext,
   closestCenter,
@@ -24,6 +23,7 @@ import type { ItemRead, ItemFilter, FiltersState, SortBy, Tag, GroupRead, Friend
 import { EMPTY_FILTERS } from '../types'
 import { useAuth } from '../context/AuthContext'
 import ItemRow from '../components/ItemRow'
+import NavMenu from '../components/NavMenu'
 import CreateItemModal from '../components/CreateItemModal'
 import AiCommandBar from '../components/AiCommandBar'
 import FilterDropdown from '../components/FilterDropdown'
@@ -298,11 +298,7 @@ export default function ItemsPage() {
           >
             <PlusIcon /> <span className="btn-create-label">New Item</span>
           </button>
-          <Link to="/friends" className="btn-ghost btn-sm">Friends</Link>
-          <Link to="/groups" className="btn-ghost btn-sm">Groups</Link>
-          {(can('rbac', 'read') || can('rbac', 'write') || can('rbac', 'delete')) && (
-            <Link to="/rbac" className="btn-ghost btn-sm">Roles</Link>
-          )}
+          <NavMenu />
           <button className="btn-ghost btn-sm" onClick={logout} title="Sign out">
             <SignOutIcon />
           </button>
@@ -410,7 +406,7 @@ export default function ItemsPage() {
                 Work {sortBy === 'name' && <span className="col-header-sort-icon">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
               </button>
               {/* Owner — not sortable */}
-              <span className="col-header-btn" style={{ cursor: 'default' }}>Owner</span>
+              <span className="col-header-btn col-header-owner" style={{ cursor: 'default' }}>Owner</span>
               {/* Priority */}
               <button
                 className={`col-header-btn${sortBy === 'priority' ? ' col-header-btn--active' : ''}`}
@@ -434,7 +430,7 @@ export default function ItemsPage() {
               </button>
               {/* Created */}
               <button
-                className={`col-header-btn${sortBy === 'created_on' ? ' col-header-btn--active' : ''}`}
+                className={`col-header-btn col-header-created${sortBy === 'created_on' ? ' col-header-btn--active' : ''}`}
                 onClick={() => handleSortChange('created_on')}
               >
                 Created {sortBy === 'created_on' && <span className="col-header-sort-icon">{sortOrder === 'asc' ? '↑' : '↓'}</span>}

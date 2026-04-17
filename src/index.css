@@ -368,6 +368,7 @@ body {
 .btn-create {
   padding: 8px 16px;
   font-size: 13px;
+  white-space: nowrap;
 }
 
 /* ─── Toolbar ────────────────────────────────────────────────────────────── */
@@ -1849,7 +1850,12 @@ body {
   .items-main { padding: 0 0 48px; }
 
   /* Item rows — hide less critical columns on mobile */
-  .item-owner-cell, .item-created-cell { display: none; }
+  .item-owner-cell, .item-created-cell, .item-actions-cell,
+  .col-header-owner, .col-header-created, .col-header-actions { display: none; }
+  :root { --list-cols: 40px 1fr 90px 120px 110px; }
+  .items-col-header, .item-row { min-width: 510px; }
+  /* Horizontal scroll lives on the list itself so the scrollbar sits below the last row */
+  .items-list { overflow-x: auto; -webkit-overflow-scrolling: touch; }
   .item-row-tags-list { flex-wrap: wrap; }
   .item-row-tags { flex-wrap: wrap; }
 
@@ -1902,6 +1908,9 @@ body {
   .items-brand-sep, .items-brand-user { display: none; }
   /* Hide toolbar dividers — flex-wrap handles spacing */
   .items-toolbar-divider { display: none; }
+  /* Icon-only create button */
+  .btn-create-label { display: none; }
+  .btn-create { padding: 9px 12px; }
 }
 
 /* ─── Filters modal ──────────────────────────────────────────────────────── */
@@ -1929,9 +1938,3 @@ body {
   box-shadow: 0 0 0 3px rgba(201, 149, 76, 0.15);
 }
 
-/* ─── Responsive: Very small phones (≤ 380px) ───────────────────────────── */
-@media (max-width: 380px) {
-  /* Icon-only create button */
-  .btn-create-label { display: none; }
-  .btn-create { padding: 9px 12px; }
-}

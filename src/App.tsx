@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { setToken } from './api/client'
+import SessionExpiredModal from './components/SessionExpiredModal'
 import LoginPage from './pages/LoginPage'
 import ItemsPage from './pages/ItemsPage'
 import RbacPage from './pages/RbacPage'
@@ -105,7 +106,7 @@ function PendingFriendsToast() {
 }
 
 function AppRoutes() {
-  const { user, loading, refreshUser } = useAuth()
+  const { user, loading, refreshUser, sessionExpired, clearSessionExpired } = useAuth()
 
   // Check for token in URL at root (backend may redirect here)
   const location = useLocation()
@@ -136,6 +137,7 @@ function AppRoutes() {
 
   return (
     <>
+      {sessionExpired && <SessionExpiredModal onSuccess={clearSessionExpired} />}
       <PendingFriendsToast />
       <Routes>
         <Route
