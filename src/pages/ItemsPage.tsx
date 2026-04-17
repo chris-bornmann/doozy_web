@@ -72,6 +72,7 @@ export default function ItemsPage() {
   const { user, logout, can } = useAuth()
   const [items, setItems] = useState<ItemRead[]>([])
   const [sortBy, setSortBy] = useState<SortBy>('created_on')
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc')
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -100,7 +101,7 @@ export default function ItemsPage() {
   )
 
   const loadItems = useCallback(
-    async (sort: SortBy, page: number, size: number, filter: ItemFilter = {}) => {
+    async (sort: SortBy, order: 'asc' | 'desc', page: number, size: number, filter: ItemFilter = {}) => {
       setLoading(true)
       setError('')
       try {
@@ -116,6 +117,7 @@ export default function ItemsPage() {
             return pa - pb
           })
         }
+        if (order === 'desc') list = [...list].reverse()
         setItems(list)
         setTotalPages(result.pages)
         setSelected(new Set())
@@ -143,8 +145,8 @@ export default function ItemsPage() {
   }
 
   useEffect(() => {
-    loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))
-  }, [sortBy, pageNum, pageSize, filterTagIds, availableTags, advancedFilter, filterGroupIds, loadItems])
+    loadItems(sortBy, sortOrder, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))
+  }, [sortBy, sortOrder, pageNum, pageSize, filterTagIds, availableTags, advancedFilter, filterGroupIds, loadItems])
 
   // Load tags, groups, and friends once on mount
   useEffect(() => {
@@ -154,7 +156,12 @@ export default function ItemsPage() {
   }, [])
 
   function handleSortChange(s: SortBy) {
-    setSortBy(s)
+    if (s === sortBy) {
+      setSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortBy(s)
+      setSortOrder('asc')
+    }
     setPageNum(1)
     setSelected(new Set())
   }
@@ -220,13 +227,13 @@ export default function ItemsPage() {
       await reorderItem(movedId, afterId)
     } catch (err) {
       console.error('Reorder failed, re-fetching:', err)
-      loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))
+      loadItems(sortBy, sortOrder, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))
     }
   }
 
   function handleCreated() {
     setShowCreate(false)
-    loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))
+    loadItems(sortBy, sortOrder, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))
   }
 
   function toggleFilterTag(tagId: number) {
@@ -282,7 +289,7 @@ export default function ItemsPage() {
             if (result.operation === 'list' && result.filter) {
               setAdvancedFilter(itemFilterToFiltersState(result.filter))
             } else {
-              loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))
+              loadItems(sortBy, sortOrder, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))
             }
           }} />}
           <button
@@ -362,7 +369,7 @@ export default function ItemsPage() {
         ) : error ? (
           <div className="items-error">
             <p>{error}</p>
-            <button className="btn-ghost btn-sm" onClick={() => loadItems(sortBy, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))}>
+            <button className="btn-ghost btn-sm" onClick={() => loadItems(sortBy, sortOrder, pageNum, pageSize, buildFilter(filterTagIds, availableTags, advancedFilter, filterGroupIds))}>
               Retry
             </button>
           </div>
@@ -400,7 +407,7 @@ export default function ItemsPage() {
                 className={`col-header-btn${sortBy === 'name' ? ' col-header-btn--active' : ''}`}
                 onClick={() => handleSortChange('name')}
               >
-                Work {sortBy === 'name' && <span className="col-header-sort-icon">↓</span>}
+                Work {sortBy === 'name' && <span className="col-header-sort-icon">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
               </button>
               {/* Owner — not sortable */}
               <span className="col-header-btn" style={{ cursor: 'default' }}>Owner</span>
@@ -409,28 +416,28 @@ export default function ItemsPage() {
                 className={`col-header-btn${sortBy === 'priority' ? ' col-header-btn--active' : ''}`}
                 onClick={() => handleSortChange('priority')}
               >
-                Priority {sortBy === 'priority' && <span className="col-header-sort-icon">↓</span>}
+                Priority {sortBy === 'priority' && <span className="col-header-sort-icon">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
               </button>
               {/* Status */}
               <button
                 className={`col-header-btn${sortBy === 'state' ? ' col-header-btn--active' : ''}`}
                 onClick={() => handleSortChange('state')}
               >
-                Status {sortBy === 'state' && <span className="col-header-sort-icon">↓</span>}
+                Status {sortBy === 'state' && <span className="col-header-sort-icon">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
               </button>
               {/* Due Date */}
               <button
                 className={`col-header-btn${sortBy === 'due_on' ? ' col-header-btn--active' : ''}`}
                 onClick={() => handleSortChange('due_on')}
               >
-                Due Date {sortBy === 'due_on' && <span className="col-header-sort-icon">↓</span>}
+                Due Date {sortBy === 'due_on' && <span className="col-header-sort-icon">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
               </button>
               {/* Created */}
               <button
                 className={`col-header-btn${sortBy === 'created_on' ? ' col-header-btn--active' : ''}`}
                 onClick={() => handleSortChange('created_on')}
               >
-                Created {sortBy === 'created_on' && <span className="col-header-sort-icon">↓</span>}
+                Created {sortBy === 'created_on' && <span className="col-header-sort-icon">{sortOrder === 'asc' ? '↑' : '↓'}</span>}
               </button>
               <div className="col-header-actions">
                 <ColsIcon />
