@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
+import NavMenu from '../components/NavMenu'
 import { fetchGroups, createGroup, deleteGroup } from '../api/groups'
 import { fetchFriends } from '../api/friends'
 import type { GroupRead } from '../types'
@@ -109,8 +109,7 @@ export default function GroupsPage() {
           <span className="items-brand-user">{user?.username}</span>
         </div>
         <div className="items-header-actions">
-          <Link to="/items" className="btn-ghost btn-sm">Items</Link>
-          <Link to="/friends" className="btn-ghost btn-sm">Friends</Link>
+          <NavMenu />
           <button className="btn-ghost btn-sm" onClick={logout} title="Sign out">
             <SignOutIcon />
           </button>

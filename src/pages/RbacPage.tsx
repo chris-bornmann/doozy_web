@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { useAuth } from '../context/useAuth'
+import NavMenu from '../components/NavMenu'
 import { fetchUserRoles, addUserRole, removeUserRole } from '../api/rbac'
 import type { UserRolesSummary } from '../types'
 
@@ -77,9 +77,7 @@ export default function RbacPage() {
         </div>
 
         <div className="items-header-actions">
-          <Link to="/items" className="btn-ghost btn-sm">Items</Link>
-          <Link to="/friends" className="btn-ghost btn-sm">Friends</Link>
-          <Link to="/groups" className="btn-ghost btn-sm">Groups</Link>
+          <NavMenu />
           <button className="btn-ghost btn-sm" onClick={logout} title="Sign out">
             <SignOutIcon />
           </button>

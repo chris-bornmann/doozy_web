@@ -19,6 +19,17 @@ interface ItemRowProps {
   myFriends?: FriendUser[]
 }
 
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 640px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 640px)')
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+  return isMobile
+}
+
 function formatDate(iso: string | null | undefined): string {
   if (!iso) return '—'
   const d = new Date(iso)
@@ -32,6 +43,7 @@ type EditingField = null | 'name' | 'priority' | 'due_on' | 'state'
 
 export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRemove, sortable, myGroups, myFriends }: ItemRowProps) {
   const id = item.id!
+  const isMobile = useIsMobile()
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id })
   const style = { transform: CSS.Transform.toString(transform), transition }
@@ -181,7 +193,8 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRe
   return (
     <div
       ref={setNodeRef}
-      style={style}
+      style={{ ...style, cursor: isMobile ? 'pointer' : undefined }}
+      onClick={isMobile ? () => setShowDetail(true) : undefined}
       className={[
         'item-row',
         selected ? 'item-row--selected' : '',
@@ -193,7 +206,7 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRe
       ].join(' ')}
     >
       {/* Cell 1: Checkbox (drag handle overlaid when sortable) */}
-      <div className="item-checkbox-cell" style={{ position: 'relative' }}>
+      <div className="item-checkbox-cell" style={{ position: 'relative' }} onClick={isMobile ? (e) => e.stopPropagation() : undefined}>
         {sortable && (
           <button className="item-drag-handle" {...attributes} {...listeners} tabIndex={-1} aria-label="Drag to reorder">
             <DragIcon />
@@ -222,8 +235,8 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRe
         ) : (
           <span
             className={`item-name ${isCancelled ? 'item-name--cancelled' : ''}`}
-            onClick={startEditName}
-            title="Click to edit name"
+            onClick={isMobile ? undefined : startEditName}
+            title={isMobile ? undefined : 'Click to edit name'}
           >
             {item.name}
           </span>
@@ -246,7 +259,7 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRe
 
       {/* Cell 4: Priority */}
       <div className="item-priority-cell">
-        <button className={`priority-badge ${priorityBadgeClass}`} onClick={cyclePriority} title="Click to cycle priority">
+        <button className={`priority-badge ${priorityBadgeClass}`} onClick={isMobile ? undefined : cyclePriority} title={isMobile ? undefined : 'Click to cycle priority'}>
           <PriorityIcon priority={priorityValue} />
           {priorityBadgeLabel}
         </button>
@@ -257,8 +270,8 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRe
         <button
           ref={stateBtnRef}
           className={`state-pill ${statePillClass}`}
-          onClick={openStateDropdown}
-          title="Click to change status"
+          onClick={isMobile ? undefined : openStateDropdown}
+          title={isMobile ? undefined : 'Click to change status'}
         >
           <StateIcon state={stateValue} />
           {STATE_LABELS[stateValue]}
@@ -270,8 +283,8 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRe
         <button
           ref={dueBtnRef}
           className={['item-due', isOverdue ? 'item-due--overdue' : '', isDueSoon ? 'item-due--soon' : ''].join(' ')}
-          onClick={openDueDatePicker}
-          title="Click to set due date"
+          onClick={isMobile ? undefined : openDueDatePicker}
+          title={isMobile ? undefined : 'Click to set due date'}
         >
           {dueValue ? formatDate(dueValue) : <span className="item-due-empty">—</span>}
         </button>

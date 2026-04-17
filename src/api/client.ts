@@ -31,6 +31,9 @@ export async function apiFetch<T>(
   })
 
   if (!resp.ok) {
+    if (resp.status === 401) {
+      window.dispatchEvent(new Event('auth:expired'))
+    }
     let message = `HTTP ${resp.status}`
     try {
       const err = await resp.json()
