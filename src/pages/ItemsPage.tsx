@@ -67,14 +67,6 @@ function applyDateRange(
   }
 }
 
-const SORT_OPTIONS: { value: SortBy; label: string }[] = [
-  { value: 'created_on', label: 'Created' },
-  { value: 'due_on', label: 'Due Date' },
-  { value: 'priority', label: 'Priority' },
-  { value: 'state', label: 'State' },
-  { value: 'name', label: 'Name' },
-  { value: 'custom', label: 'Custom' },
-]
 
 export default function ItemsPage() {
   const { user, logout, can } = useAuth()
@@ -86,7 +78,7 @@ export default function ItemsPage() {
   const [showCreate, setShowCreate] = useState(false)
   const [deleting, setDeleting] = useState(false)
   const [pageNum, setPageNum] = useState(1)
-  const [pageSize, setPageSize] = useState(20)
+  const [pageSize] = useState(20)
   const [totalPages, setTotalPages] = useState(1)
 
   // Tag filter state
@@ -163,12 +155,6 @@ export default function ItemsPage() {
 
   function handleSortChange(s: SortBy) {
     setSortBy(s)
-    setPageNum(1)
-    setSelected(new Set())
-  }
-
-  function handlePageSizeChange(size: number) {
-    setPageSize(size)
     setPageNum(1)
     setSelected(new Set())
   }
@@ -278,6 +264,7 @@ export default function ItemsPage() {
   const isCustomSort = sortBy === 'custom'
   const itemIds = displayedItems.map(i => i.id!)
 
+
   return (
     <div className="items-page">
       {/* Header */}
@@ -315,21 +302,18 @@ export default function ItemsPage() {
         </div>
       </header>
 
-      {/* Sort + filter bar */}
-      <div className="items-sort-bar">
-        <label className="items-sort-label" htmlFor="sort-select">Sort by</label>
-        <select
-          id="sort-select"
-          className="items-sort-select"
-          value={sortBy}
-          onChange={e => handleSortChange(e.target.value as SortBy)}
-        >
-          {SORT_OPTIONS.map(opt => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
-          ))}
-        </select>
+      {/* Toolbar */}
+      <div className="items-toolbar">
+        <div className="items-toolbar-search">
+          <SearchIcon />
+          <input
+            className="items-toolbar-search-input"
+            placeholder="Search work…"
+            value={advancedFilter.name}
+            onChange={e => setAdvancedFilter(f => ({ ...f, name: e.target.value }))}
+          />
+        </div>
 
-        <div className="items-toolbar-divider" />
         <FilterDropdown
           label="Tag"
           options={availableTags.map(t => ({ id: t.id!, label: t.name }))}
@@ -351,28 +335,13 @@ export default function ItemsPage() {
           onClick={() => setShowFiltersModal(true)}
         >
           <FiltersIcon />
-          Filters{isFilterActive ? ' ·' : ''}
+          Filter{isFilterActive ? ' ·' : ''}
         </button>
-
-        <div className="items-toolbar-divider" />
-        <label className="items-sort-label" htmlFor="page-size-select">Items</label>
-        <select
-          id="page-size-select"
-          className="items-sort-select"
-          value={pageSize}
-          onChange={e => handlePageSizeChange(Number(e.target.value))}
-        >
-          {[10, 20, 50, 100].map(n => (
-            <option key={n} value={n}>{n}</option>
-          ))}
-        </select>
 
         {/* Selection toolbar */}
         {selected.size > 0 && (
           <div className="items-selection-bar">
-            <span className="items-selection-count">
-              {selected.size} selected
-            </span>
+            <span className="items-selection-count">{selected.size} selected</span>
             <button
               className="btn-danger btn-sm"
               onClick={handleDeleteSelected}
@@ -412,21 +381,60 @@ export default function ItemsPage() {
           </div>
         ) : (
           <div className="items-list">
-            {/* Select-all row */}
-            <div className="items-list-header">
+            {/* Column headers */}
+            <div className="items-col-header">
+              <div className="items-col-header-checkbox">
+                <button
+                  className="item-checkbox items-select-all"
+                  onClick={toggleSelectAll}
+                  aria-label="Select all"
+                >
+                  <div className={`item-checkbox-box ${allSelected ? 'item-checkbox-box--checked' : ''} ${someSelected ? 'item-checkbox-box--indeterminate' : ''}`}>
+                    {allSelected && <CheckIcon />}
+                    {someSelected && <MinusIcon />}
+                  </div>
+                </button>
+              </div>
+              {/* Work column */}
               <button
-                className="item-checkbox items-select-all"
-                onClick={toggleSelectAll}
-                aria-label="Select all"
+                className={`col-header-btn${sortBy === 'name' ? ' col-header-btn--active' : ''}`}
+                onClick={() => handleSortChange('name')}
               >
-                <div className={`item-checkbox-box ${allSelected ? 'item-checkbox-box--checked' : ''} ${someSelected ? 'item-checkbox-box--indeterminate' : ''}`}>
-                  {allSelected && <CheckIcon />}
-                  {someSelected && <MinusIcon />}
-                </div>
+                Work {sortBy === 'name' && <span className="col-header-sort-icon">↓</span>}
               </button>
-              <span className="items-list-count">
-                {displayedItems.length} item{displayedItems.length !== 1 ? 's' : ''}
-              </span>
+              {/* Owner — not sortable */}
+              <span className="col-header-btn" style={{ cursor: 'default' }}>Owner</span>
+              {/* Priority */}
+              <button
+                className={`col-header-btn${sortBy === 'priority' ? ' col-header-btn--active' : ''}`}
+                onClick={() => handleSortChange('priority')}
+              >
+                Priority {sortBy === 'priority' && <span className="col-header-sort-icon">↓</span>}
+              </button>
+              {/* Status */}
+              <button
+                className={`col-header-btn${sortBy === 'state' ? ' col-header-btn--active' : ''}`}
+                onClick={() => handleSortChange('state')}
+              >
+                Status {sortBy === 'state' && <span className="col-header-sort-icon">↓</span>}
+              </button>
+              {/* Due Date */}
+              <button
+                className={`col-header-btn${sortBy === 'due_on' ? ' col-header-btn--active' : ''}`}
+                onClick={() => handleSortChange('due_on')}
+              >
+                Due Date {sortBy === 'due_on' && <span className="col-header-sort-icon">↓</span>}
+              </button>
+              {/* Created */}
+              <button
+                className={`col-header-btn${sortBy === 'created_on' ? ' col-header-btn--active' : ''}`}
+                onClick={() => handleSortChange('created_on')}
+              >
+                Created {sortBy === 'created_on' && <span className="col-header-sort-icon">↓</span>}
+              </button>
+              <div className="col-header-actions">
+                <ColsIcon />
+              </div>
             </div>
 
             <DndContext
@@ -438,7 +446,7 @@ export default function ItemsPage() {
                 {displayedItems.map((item, idx) => (
                   <div
                     key={item.id}
-                    style={{ animationDelay: `${idx * 35}ms` }}
+                    style={{ animationDelay: `${idx * 25}ms` }}
                     className="item-row-wrapper"
                   >
                     <ItemRow
@@ -456,8 +464,16 @@ export default function ItemsPage() {
               </SortableContext>
             </DndContext>
 
-            {totalPages > 1 && (
-              <div className="items-pagination">
+            {/* Footer */}
+            <div className="items-footer">
+              <button className="items-footer-create" onClick={() => setShowCreate(true)}>
+                <PlusIcon /> New Item
+              </button>
+              <span className="items-footer-count">
+                {displayedItems.length} item{displayedItems.length !== 1 ? 's' : ''}
+                {totalPages > 1 && ` · Page ${pageNum} of ${totalPages}`}
+              </span>
+              <div className="items-footer-nav">
                 <button
                   className="items-page-btn"
                   onClick={() => setPageNum(p => Math.max(1, p - 1))}
@@ -466,9 +482,6 @@ export default function ItemsPage() {
                 >
                   <ChevronLeftIcon />
                 </button>
-                <span className="items-page-info">
-                  Page {pageNum} of {totalPages}
-                </span>
                 <button
                   className="items-page-btn"
                   onClick={() => setPageNum(p => Math.min(totalPages, p + 1))}
@@ -478,7 +491,7 @@ export default function ItemsPage() {
                   <ChevronRightIcon />
                 </button>
               </div>
-            )}
+            </div>
           </div>
         )}
       </main>
@@ -502,6 +515,24 @@ function FiltersIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
       <path d="M1 2.5h11M3 6.5h7M5 10.5h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function SearchIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <circle cx="6" cy="6" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M9.5 9.5L13 13" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ColsIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+      <rect x="1" y="1" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.2" />
+      <rect x="9" y="1" width="4" height="12" rx="1" stroke="currentColor" strokeWidth="1.2" />
     </svg>
   )
 }

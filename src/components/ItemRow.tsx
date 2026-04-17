@@ -1,14 +1,11 @@
-import { useState, useRef, useCallback, useEffect, useLayoutEffect, KeyboardEvent } from 'react'
+import { useState, useRef, useCallback, useEffect, KeyboardEvent } from 'react'
 import { createPortal } from 'react-dom'
 import { useSortable } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import type { Item, ItemRead, Tag, GroupRead, FriendUser } from '../types'
-import { Priority, PRIORITY_LABELS, State, STATE_LABELS, STATE_CSS } from '../types'
+import type { Item, ItemRead, GroupRead, FriendUser } from '../types'
+import { Priority, State, STATE_LABELS, STATE_CSS } from '../types'
 import { patchItem } from '../api/items'
-import { fetchItemTags } from '../api/tags'
-import { sanitizeHtml } from '../utils/sanitize'
 import DatePicker from './DatePicker'
-import RichTextEditor from './RichTextEditor'
 import ItemDetailModal from './ItemDetailModal'
 
 interface ItemRowProps {
@@ -31,7 +28,7 @@ function formatDate(iso: string | null | undefined): string {
 const PRIORITY_CYCLE: Priority[] = [Priority.LOW, Priority.MEDIUM, Priority.HIGH]
 const ALL_STATES: State[] = [State.New, State.InProgress, State.Done, State.Cancelled]
 
-type EditingField = null | 'name' | 'description' | 'priority' | 'due_on' | 'state'
+type EditingField = null | 'name' | 'priority' | 'due_on' | 'state'
 
 export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRemove, sortable, myGroups, myFriends }: ItemRowProps) {
   const id = item.id!
@@ -42,26 +39,11 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRe
   const [showDetail, setShowDetail] = useState(false)
   const [editingField, setEditingField] = useState<EditingField>(null)
   const [nameValue, setNameValue] = useState(item.name)
-  const [descValue, setDescValue] = useState(item.description ?? '')
+  const [, setDescValue] = useState(item.description ?? '')
   const [dueValue, setDueValue] = useState<string | null>(item.due_on ?? null)
   const [priorityValue, setPriorityValue] = useState<Priority | null>(item.priority ?? null)
   const [stateValue, setStateValue] = useState<State>(item.state ?? State.New)
   const [saving, setSaving] = useState(false)
-
-  const [rowTags, setRowTags] = useState<Tag[]>([])
-  const tagsListRef = useRef<HTMLDivElement>(null)
-  const [tagsOverflow, setTagsOverflow] = useState(false)
-
-  useEffect(() => {
-    let cancelled = false
-    fetchItemTags(id).then(tags => { if (!cancelled) setRowTags(tags) }).catch(() => {})
-    return () => { cancelled = true }
-  }, [id])
-
-  useLayoutEffect(() => {
-    const el = tagsListRef.current
-    if (el) setTagsOverflow(el.scrollWidth > el.clientWidth)
-  }, [rowTags])
 
   const nameInputRef = useRef<HTMLInputElement>(null)
   const dueBtnRef = useRef<HTMLButtonElement>(null)
@@ -110,14 +92,6 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRe
   function onNameKeyDown(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') { e.preventDefault(); commitName() }
     if (e.key === 'Escape') { setNameValue(item.name); setEditingField(null) }
-  }
-
-  // ── Description ───────────────────────────────────────────────────────────
-  function startEditDesc() { setDescValue(item.description ?? ''); setEditingField('description') }
-  function commitDesc() {
-    const getPlain = (h: string) => { const el = document.createElement('div'); el.innerHTML = h; return el.innerText.trim() }
-    if (getPlain(descValue) !== getPlain(item.description ?? '')) saveField('description', descValue)
-    else setEditingField(null)
   }
 
   // ── Priority ──────────────────────────────────────────────────────────────
@@ -181,12 +155,6 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRe
   }, [editingField])
 
   // ── Derived display values ────────────────────────────────────────────────
-  const priorityClass =
-    priorityValue === Priority.HIGH ? 'priority-high' :
-    priorityValue === Priority.MEDIUM ? 'priority-medium' :
-    priorityValue === Priority.LOW ? 'priority-low' : 'priority-none'
-  const priorityLabel = priorityValue != null ? PRIORITY_LABELS[priorityValue] : '—'
-
   const now = Date.now()
   const dueMs = dueValue ? new Date(dueValue).getTime() : null
   const isActive = stateValue !== State.Cancelled && stateValue !== State.Done
@@ -194,6 +162,21 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRe
   const isOverdue = isActive && dueMs != null && dueMs < now
 
   const isCancelled = stateValue === State.Cancelled
+
+  const statePillClass =
+    stateValue === State.New ? 'state-pill--new' :
+    stateValue === State.InProgress ? 'state-pill--in-progress' :
+    stateValue === State.Done ? 'state-pill--done' : 'state-pill--cancelled'
+
+  const priorityBadgeClass =
+    priorityValue === Priority.HIGH ? 'priority-badge--high' :
+    priorityValue === Priority.MEDIUM ? 'priority-badge--medium' :
+    priorityValue === Priority.LOW ? 'priority-badge--low' : 'priority-badge--none'
+
+  const priorityBadgeLabel =
+    priorityValue === Priority.HIGH ? 'High' :
+    priorityValue === Priority.MEDIUM ? 'Medium' :
+    priorityValue === Priority.LOW ? 'Low' : '—'
 
   return (
     <div
@@ -209,102 +192,104 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRe
         isDueSoon ? 'item-row--due-soon' : '',
       ].join(' ')}
     >
-      {sortable && (
-        <button className="item-drag-handle" {...attributes} {...listeners} tabIndex={-1} aria-label="Drag to reorder">
-          <DragIcon />
-        </button>
-      )}
-
-      <div className="item-left-col">
+      {/* Cell 1: Checkbox (drag handle overlaid when sortable) */}
+      <div className="item-checkbox-cell" style={{ position: 'relative' }}>
+        {sortable && (
+          <button className="item-drag-handle" {...attributes} {...listeners} tabIndex={-1} aria-label="Drag to reorder">
+            <DragIcon />
+          </button>
+        )}
         <button className="item-checkbox" onClick={() => onToggleSelect(id)} aria-label={selected ? 'Deselect' : 'Select'}>
           <div className={`item-checkbox-box ${selected ? 'item-checkbox-box--checked' : ''}`}>
             {selected && <CheckIcon />}
           </div>
         </button>
-        <button
-          className="item-expand-btn"
-          onClick={() => setShowDetail(true)}
-          aria-label="Edit item details"
-          title="Open detail view"
-        >
-          <ExpandIcon />
+      </div>
+
+      {/* Cell 2: Work — ID + name */}
+      <div className="item-work-cell">
+        {editingField === 'name' ? (
+          <input
+            ref={nameInputRef}
+            className="item-name-input"
+            value={nameValue}
+            onChange={e => setNameValue(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={onNameKeyDown}
+            minLength={8}
+            maxLength={32}
+          />
+        ) : (
+          <span
+            className={`item-name ${isCancelled ? 'item-name--cancelled' : ''}`}
+            onClick={startEditName}
+            title="Click to edit name"
+          >
+            {item.name}
+          </span>
+        )}
+      </div>
+
+      {/* Cell 3: Owner */}
+      <div className="item-owner-cell">
+        {item.owner ? (
+          <>
+            <span className="item-owner-avatar" style={{ background: avatarColor(item.owner) }}>
+              {initials(item.owner)}
+            </span>
+            <span className="item-owner-name">{item.owner}</span>
+          </>
+        ) : (
+          <span className="item-owner-name" style={{ color: 'var(--text-3)' }}>—</span>
+        )}
+      </div>
+
+      {/* Cell 4: Priority */}
+      <div className="item-priority-cell">
+        <button className={`priority-badge ${priorityBadgeClass}`} onClick={cyclePriority} title="Click to cycle priority">
+          <PriorityIcon priority={priorityValue} />
+          {priorityBadgeLabel}
         </button>
       </div>
 
-      <div className="item-content">
-        {/* Row 1: name · state · priority · due date */}
-        <div className="item-line1">
-          {editingField === 'name' ? (
-            <input
-              ref={nameInputRef}
-              className="item-name-input"
-              value={nameValue}
-              onChange={e => setNameValue(e.target.value)}
-              onBlur={commitName}
-              onKeyDown={onNameKeyDown}
-              minLength={8}
-              maxLength={32}
-            />
-          ) : (
-            <span className={`item-name ${isCancelled ? 'item-name--cancelled' : ''}`} onClick={startEditName} title="Click to edit name">
-              {item.name}
-            </span>
-          )}
+      {/* Cell 5: Status */}
+      <div className="item-status-cell">
+        <button
+          ref={stateBtnRef}
+          className={`state-pill ${statePillClass}`}
+          onClick={openStateDropdown}
+          title="Click to change status"
+        >
+          <StateIcon state={stateValue} />
+          {STATE_LABELS[stateValue]}
+        </button>
+      </div>
 
-          <div className="item-line1-spacer" />
+      {/* Cell 6: Due date */}
+      <div className="item-due-cell">
+        <button
+          ref={dueBtnRef}
+          className={['item-due', isOverdue ? 'item-due--overdue' : '', isDueSoon ? 'item-due--soon' : ''].join(' ')}
+          onClick={openDueDatePicker}
+          title="Click to set due date"
+        >
+          {dueValue ? formatDate(dueValue) : <span className="item-due-empty">—</span>}
+        </button>
+      </div>
 
-          {/* State badge */}
-          <button
-            ref={stateBtnRef}
-            className={`item-state ${STATE_CSS[stateValue]}`}
-            onClick={openStateDropdown}
-            title="Click to change state"
-          >
-            <StateIcon state={stateValue} />
-            {STATE_LABELS[stateValue]}
-          </button>
+      {/* Cell 7: Created */}
+      <div className="item-created-cell">{formatDate(item.created_on)}</div>
 
-          <button className={`item-priority ${priorityClass}`} onClick={cyclePriority} title="Click to cycle priority">
-            {priorityLabel}
-          </button>
-
-          <button
-            ref={dueBtnRef}
-            className={['item-due', isOverdue ? 'item-due--overdue' : '', isDueSoon ? 'item-due--soon' : ''].join(' ')}
-            onClick={openDueDatePicker}
-            title="Click to change due date"
-          >
-            <CalendarIcon />
-            {dueValue ? formatDate(dueValue) : <span className="item-due-empty">Set due date</span>}
-          </button>
-        </div>
-
-        {/* Row 2: description · created date */}
-        <div className="item-line2">
-          {editingField === 'description' ? (
-            <RichTextEditor value={descValue} onChange={setDescValue} onBlur={commitDesc} className="item-rte" />
-          ) : (
-            <div className="item-desc" onClick={startEditDesc} title="Click to edit description">
-              {item.description ? (
-                <span className="item-desc-text" dangerouslySetInnerHTML={{ __html: sanitizeHtml(item.description) }} />
-              ) : (
-                <span className="item-desc-empty">No description — click to add</span>
-              )}
-            </div>
-          )}
-          <div className="item-row-tags">
-            <div ref={tagsListRef} className="item-row-tags-list">
-              {rowTags.map(tag => (
-                <span key={tag.id} className="item-row-tag">{tag.name}</span>
-              ))}
-            </div>
-            {tagsOverflow && <span className="item-row-tags-more">…</span>}
-          </div>
-          <span className="item-created">Created {formatDate(item.created_on)}</span>
-          {(stateValue === State.Done || stateValue === State.Cancelled) && (
-            <span className="item-created">Completed {formatDate(item.completed_on)}</span>
-          )}
-        </div>
+      {/* Cell 8: Actions */}
+      <div className="item-actions-cell">
+        <button
+          className="item-expand-btn"
+          onClick={() => setShowDetail(true)}
+          aria-label="Open detail view"
+          title="Open detail"
+        >
+          <ExpandIcon />
+        </button>
       </div>
 
       {/* Datepicker portal */}
@@ -335,21 +320,36 @@ export default function ItemRow({ item, selected, onToggleSelect, onUpdate, onRe
           onRemove={() => onRemove(id)}
           onUpdate={updated => {
             onUpdate(updated)
-            // Sync local display state — useState doesn't re-init from prop changes
             setNameValue(updated.name)
             setDescValue(updated.description ?? '')
             setPriorityValue(updated.priority ?? null)
             setStateValue(updated.state ?? State.New)
             setDueValue(updated.due_on ?? null)
           }}
-          onClose={() => {
-            setShowDetail(false)
-            fetchItemTags(id).then(tags => setRowTags(tags)).catch(() => {})
-          }}
+          onClose={() => setShowDetail(false)}
         />
       )}
     </div>
   )
+}
+
+// ── Avatar helpers ────────────────────────────────────────────────────────────
+const AVATAR_COLORS = ['#4285F4', '#DB4437', '#F4B400', '#0F9D58']
+function avatarColor(name: string): string {
+  let hash = 0
+  for (let i = 0; i < name.length; i++) hash = (hash * 31 + name.charCodeAt(i)) & 0x7fffffff
+  return AVATAR_COLORS[hash % AVATAR_COLORS.length]
+}
+function initials(name: string): string {
+  return name.slice(0, 2).toUpperCase()
+}
+
+// ── Priority icon ─────────────────────────────────────────────────────────────
+function PriorityIcon({ priority }: { priority: Priority | null }) {
+  if (priority === Priority.HIGH) return <span style={{ fontSize: 11 }}>▲</span>
+  if (priority === Priority.MEDIUM) return <span style={{ fontSize: 11, letterSpacing: '-1px' }}>＝</span>
+  if (priority === Priority.LOW) return <span style={{ fontSize: 11 }}>▼</span>
+  return null
 }
 
 // ── State dropdown ────────────────────────────────────────────────────────────
@@ -452,15 +452,6 @@ function ExpandIcon() {
   return (
     <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
       <path d="M1 4V1h3M7 1h3v3M10 7v3H7M4 10H1V7" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  )
-}
-function CalendarIcon() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
-      <rect x="1" y="2" width="11" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
-      <path d="M4 1v2M9 1v2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-      <path d="M1 5h11" stroke="currentColor" strokeWidth="1.2" />
     </svg>
   )
 }
