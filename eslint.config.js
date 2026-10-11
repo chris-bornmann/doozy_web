@@ -3,26 +3,34 @@ import globals from 'globals'
 import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 import tseslint from 'typescript-eslint'
+import { defineConfig, globalIgnores } from 'eslint/config'
 
-export default tseslint.config(
-  { ignores: ['dist'] },
+export default defineConfig([
+  globalIgnores(['dist']),
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
+    extends: [
+      js.configs.recommended,
+      tseslint.configs.recommended,
+      reactHooks.configs.flat.recommended,
+      reactRefresh.configs.vite,
+    ],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
     },
-    plugins: {
-      'react-hooks': reactHooks,
-      'react-refresh': reactRefresh,
-    },
     rules: {
-      ...reactHooks.configs.recommended.rules,
       'react-refresh/only-export-components': [
         'warn',
         { allowConstantExport: true },
       ],
+      // React Compiler rules added in eslint-plugin-react-hooks 7. They flag
+      // existing patterns (setting loading state when an effect starts a
+      // fetch; Date.now() during render) that work correctly today, since the
+      // app doesn't use the React Compiler. Reported as warnings so they stay
+      // visible; fixing them means restructuring how pages load data.
+      'react-hooks/set-state-in-effect': 'warn',
+      'react-hooks/purity': 'warn',
     },
   },
-)
+])
