@@ -12,6 +12,11 @@ Open .claude/settings.local.json.  Set "allow" to "mcp__playwright".
 * npm run dev
 * VITE_API_BASE_URL=http://100.104.51.111:8000 npm run dev --dd -- --host
 
+# CI
+Every PR runs `.github/workflows/ci.yml`: `npm run lint`, `npm run build` (which
+type-checks), and `npm audit` on production dependencies (high/critical fail the check;
+dev-only tooling is reported but doesn't fail it).
+
 # Deploying
 Pushes to `main` are built and deployed to AWS (S3 + CloudFront) by
 `.github/workflows/deploy.yml`. It can also be run by hand from the Actions tab.
