@@ -1,0 +1,102 @@
+# Builds the site and deploys it to the S3 bucket + CloudFront distribution
+# created by the doozy_aws Terraform (envs/prod).
+#
+# Runs on every push to main, or manually from the Actions tab. AWS access
+# comes from GitHub OIDC (no stored AWS keys); the IAM role only trusts
+# workflows running on main in this repo.
+#
+# Required repository variables (Settings > Secrets and variables > Actions >
+# Variables), all taken from `terraform output` in doozy_aws/envs/prod:
+#   AWS_DEPLOY_ROLE_ARN       frontend_deploy_role_arn
+#   FRONTEND_BUCKET           frontend_bucket_name
+#   FRONTEND_DISTRIBUTION_ID  frontend_distribution_id
+# Optional:
+#   VITE_API_BASE_URL         URL of the backend API, baked into the build
+#
+# Until AWS_DEPLOY_ROLE_ARN is set, the deploy job is skipped.
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # to request the GitHub OIDC token exchanged for AWS credentials
+
+# Never run two deploys at once, and never cancel one halfway through a sync.
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Build and deploy
+    if: vars.AWS_DEPLOY_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: us-west-2
+      BUCKET: ${{ vars.FRONTEND_BUCKET }}
+      DISTRIBUTION_ID: ${{ vars.FRONTEND_DISTRIBUTION_ID }}
+      VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check configuration
+        run: |
+          if [ -z "$BUCKET" ] || [ -z "$DISTRIBUTION_ID" ]; then
+            echo "::error::Set the FRONTEND_BUCKET and FRONTEND_DISTRIBUTION_ID repository variables."
+            exit 1
+          fi
+          if [ -z "$VITE_API_BASE_URL" ]; then
+            echo "::warning::VITE_API_BASE_URL is not set; the site will call http://localhost:8000."
+          fi
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # `npm run build` also type-checks (tsc -b), so type errors stop the deploy.
+      - name: Build
+        run: npm run build
+
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: ${{ vars.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # The upload order matters so visitors mid-deploy never get a broken page:
+      # 1. Add the new hashed assets (old ones stay, so the current index.html still works).
+      #    Their names change whenever their content does, so they can be cached for a year.
+      - name: Upload assets
+        run: >-
+          aws s3 sync dist/assets "s3://$BUCKET/assets"
+          --cache-control "public,max-age=31536000,immutable"
+
+      # 2. Switch to the new index.html (and other un-hashed files), which browsers
+      #    must re-check on every load, then drop CloudFront's cached copy.
+      - name: Upload index.html and other files
+        run: >-
+          aws s3 sync dist "s3://$BUCKET"
+          --delete --exclude "assets/*"
+          --cache-control "no-cache"
+
+      - name: Invalidate CloudFront cache
+        run: >-
+          aws cloudfront create-invalidation
+          --distribution-id "$DISTRIBUTION_ID"
+          --paths "/index.html"
+
+      # 3. Remove assets the new index.html no longer references.
+      - name: Remove old assets
+        run: >-
+          aws s3 sync dist/assets "s3://$BUCKET/assets"
+          --delete
+          --cache-control "public,max-age=31536000,immutable"
