@@ -1,6 +1,90 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+
+@theme {
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-sans: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --color-ink-50: #f7f4ee;
+  --color-ink-100: #ede8df;
+  --color-ink-200: #d4ccb8;
+  --color-ink-300: #b5ab9c;
+  --color-ink-400: #8a7f72;
+  --color-ink-500: #57503f;
+  --color-ink-600: #3d382e;
+  --color-ink-700: #2a2720;
+  --color-ink-800: #1e1c17;
+  --color-ink-900: #161410;
+  --color-ink-950: #0c0b09;
+
+  --color-amber: #c9954c;
+  --color-amber-light: #e8b062;
+  --color-amber-dim: #8a6130;
+  --color-amber-muted: #4a3520;
+
+  --color-crimson: #a8352f;
+  --color-crimson-light: #c94040;
+  --color-crimson-dim: #6b1f1b;
+  --color-crimson-muted: #3d1210;
+
+  --color-sage: #4a7c59;
+  --color-sage-light: #5f9e72;
+  --color-sage-dim: #2e5038;
+  --color-sage-muted: #1a2e20;
+
+  --animate-fade-in: fadeIn 0.4s ease-out forwards;
+  --animate-slide-up: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  --animate-slide-down: slideDown 0.25s cubic-bezier(0.4, 0, 1, 1) forwards;
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slideUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+  @keyframes slideDown {
+    from {
+      opacity: 0;
+      transform: translateY(-8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
 
 /* ─── Design tokens ──────────────────────────────────────────────────────── */
 :root {
