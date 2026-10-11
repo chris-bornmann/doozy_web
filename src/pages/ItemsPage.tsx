@@ -117,7 +117,10 @@ export default function ItemsPage() {
             return pa - pb
           })
         }
-        if (order === 'desc') list = [...list].reverse()
+        // Custom order is the user's saved arrangement and must be shown exactly as
+        // the API returns it: drag-and-drop computes "place after the item above"
+        // from the displayed order, so a reversed list would save wrong positions.
+        if (order === 'desc' && sort !== 'custom') list = [...list].reverse()
         setItems(list)
         setTotalPages(result.pages)
         setSelected(new Set())
@@ -160,6 +163,20 @@ export default function ItemsPage() {
       setSortOrder(o => (o === 'asc' ? 'desc' : 'asc'))
     } else {
       setSortBy(s)
+      setSortOrder('asc')
+    }
+    setPageNum(1)
+    setSelected(new Set())
+  }
+
+  // Switch drag-to-reorder mode on or off. Turning it off returns to the
+  // default view (newest first), the same as when the page first loads.
+  function toggleCustomSort() {
+    if (sortBy === 'custom') {
+      setSortBy('created_on')
+      setSortOrder('desc')
+    } else {
+      setSortBy('custom')
       setSortOrder('asc')
     }
     setPageNum(1)
@@ -340,6 +357,15 @@ export default function ItemsPage() {
           <FiltersIcon />
           Filter{isFilterActive ? ' ·' : ''}
         </button>
+        <button
+          className={`filter-dropdown-trigger${isCustomSort ? ' filter-dropdown-trigger--active' : ''}`}
+          onClick={toggleCustomSort}
+          aria-pressed={isCustomSort}
+          title="Arrange items in your own order by dragging them"
+        >
+          <ReorderIcon />
+          Custom order
+        </button>
 
         {/* Selection toolbar */}
         {selected.size > 0 && (
@@ -518,6 +544,19 @@ function FiltersIcon() {
   return (
     <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
       <path d="M1 2.5h11M3 6.5h7M5 10.5h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ReorderIcon() {
+  return (
+    <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+      <circle cx="4.5" cy="3" r="1.1" fill="currentColor" />
+      <circle cx="8.5" cy="3" r="1.1" fill="currentColor" />
+      <circle cx="4.5" cy="6.5" r="1.1" fill="currentColor" />
+      <circle cx="8.5" cy="6.5" r="1.1" fill="currentColor" />
+      <circle cx="4.5" cy="10" r="1.1" fill="currentColor" />
+      <circle cx="8.5" cy="10" r="1.1" fill="currentColor" />
     </svg>
   )
 }
