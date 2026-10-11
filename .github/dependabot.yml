@@ -1,0 +1,60 @@
+# Weekly PRs to keep npm packages and GitHub Actions up to date.
+# Every PR runs the CI checks (lint, type-check/build, dependency audit).
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    # Wait a few days before proposing a brand-new release, so a compromised
+    # or broken publish is usually caught and pulled before it reaches us.
+    # Security updates are not delayed.
+    cooldown:
+      default-days: 5
+    groups:
+      # Packages that must move together, including across major versions.
+      # A package goes into the first group whose patterns match it.
+      eslint:
+        patterns:
+          - "eslint"
+          - "@eslint/*"
+          - "eslint-plugin-*"
+          - "typescript-eslint"
+          - "globals"
+      vite:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+      # Everything else: minor and patch updates share one PR. Other major
+      # updates (e.g. @dnd-kit/sortable) get their own PR each.
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+    ignore:
+      # typescript-eslint only supports TypeScript < 6.1. Remove this once its
+      # peer range includes newer versions, or linting breaks.
+      - dependency-name: "typescript"
+        versions: [">= 6.1.0"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 5
+    groups:
+      github-actions:
+        patterns: ["*"]
