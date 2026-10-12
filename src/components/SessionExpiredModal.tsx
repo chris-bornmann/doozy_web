@@ -1,5 +1,5 @@
 import { useState, FormEvent } from 'react'
-import { loginWithPassword, getGoogleLoginUrl } from '../api/auth'
+import { loginWithPassword, createGoogleLoginUrl } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 
 interface Props {
@@ -80,7 +80,7 @@ export default function SessionExpiredModal({ onSuccess }: Props) {
         <button
           type="button"
           className="btn-google"
-          onClick={() => { window.location.href = getGoogleLoginUrl() }}
+          onClick={() => { window.location.href = createGoogleLoginUrl() }}
           style={{ width: '100%' }}
         >
           <GoogleIcon />
