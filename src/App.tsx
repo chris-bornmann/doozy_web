@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, Link } from 'react-router-dom'
+import { useEffect, useRef, useState } from 'react'
+import { BrowserRouter, Routes, Route, Navigate, useNavigate, Link } from 'react-router-dom'
 import { AuthProvider, useAuth } from './context/AuthContext'
 import { setToken } from './api/client'
+import { consumeOAuthState } from './api/auth'
 import SessionExpiredModal from './components/SessionExpiredModal'
 import LoginPage from './pages/LoginPage'
 import ItemsPage from './pages/ItemsPage'
@@ -9,24 +10,45 @@ import RbacPage from './pages/RbacPage'
 import FriendsPage from './pages/FriendsPage'
 import GroupsPage from './pages/GroupsPage'
 
-// Handles the OAuth callback redirect from the backend.
-// The backend should redirect to /auth/callback?token=<jwt>
-// or to /?token=<jwt> after a successful Google OAuth flow.
+// Handles the redirect back from the backend after Google sign-in:
+//   /auth/callback#access_token=<jwt>&token_type=bearer&state=<state>
+//
+// This is the ONLY place the app accepts a token from a URL. Accepting one
+// anywhere else (as the app used to, on every page and in the query string)
+// lets an attacker send a link that silently signs the victim in to the
+// attacker's account. The token is accepted only if:
+//   - it arrives in the URL fragment (after "#"), which the backend uses and
+//     which browsers never send to servers, and
+//   - the returned `state` matches the one this tab generated when it started
+//     signing in (see consumeOAuthState in api/auth.ts).
 function OAuthCallback() {
   const navigate = useNavigate()
   const { refreshUser } = useAuth()
-  const location = useLocation()
+  // StrictMode runs effects twice in development; the stored state can only
+  // be checked once, so make sure the callback is processed a single time.
+  const handled = useRef(false)
 
   useEffect(() => {
-    const params = new URLSearchParams(location.search)
-    const token = params.get('token') ?? params.get('access_token')
-    if (token) {
+    if (handled.current) return
+    handled.current = true
+
+    const params = new URLSearchParams(window.location.hash.slice(1))
+    const token = params.get('access_token')
+    const stateMatches = consumeOAuthState(params.get('state'))
+
+    // Remove the token from the address bar and browser history right away.
+    window.history.replaceState(null, '', window.location.pathname)
+
+    if (token && stateMatches) {
       setToken(token)
       refreshUser().then(() => navigate('/items', { replace: true }))
     } else {
-      navigate('/login', { replace: true })
+      navigate('/login', {
+        replace: true,
+        state: { error: 'Sign-in could not be verified. Please sign in again.' },
+      })
     }
-  }, [location.search, navigate, refreshUser])
+  }, [navigate, refreshUser])
 
   return (
     <div className="flex items-center justify-center h-screen bg-ink-950">
@@ -106,24 +128,7 @@ function PendingFriendsToast() {
 }
 
 function AppRoutes() {
-  const { user, loading, refreshUser, sessionExpired, clearSessionExpired } = useAuth()
-
-  // Check for token in URL at root (backend may redirect here)
-  const location = useLocation()
-  const navigate = useNavigate()
-
-  useEffect(() => {
-    // Check query string first, then hash fragment (Google OAuth returns #access_token=...&token_type=bearer)
-    const queryParams = new URLSearchParams(location.search)
-    const hashParams = new URLSearchParams(window.location.hash.slice(1))
-    const token = queryParams.get('token') ?? queryParams.get('access_token')
-      ?? hashParams.get('access_token') ?? hashParams.get('token')
-    if (token) {
-      setToken(token)
-      // Refresh user then navigate; replace history so the token doesn't linger in the URL
-      refreshUser().then(() => navigate('/items', { replace: true }))
-    }
-  }, [location.search, location.hash, navigate, refreshUser])
+  const { user, loading, sessionExpired, clearSessionExpired } = useAuth()
 
   if (loading) {
     return (

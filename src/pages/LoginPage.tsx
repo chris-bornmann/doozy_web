@@ -1,13 +1,17 @@
 import { useState, useEffect, FormEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { loginWithPassword, getGoogleLoginUrl } from '../api/auth'
+import { useLocation, useNavigate } from 'react-router-dom'
+import { loginWithPassword, createGoogleLoginUrl } from '../api/auth'
 import { useAuth } from '../context/AuthContext'
 import RegisterModal from '../components/RegisterModal'
 
 export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
+  const location = useLocation()
+  // /auth/callback sends users here with an error if a Google sign-in could
+  // not be verified (see OAuthCallback in App.tsx).
+  const callbackError = (location.state as { error?: string } | null)?.error ?? ''
+  const [error, setError] = useState(callbackError)
   const [loading, setLoading] = useState(false)
   const [showRegister, setShowRegister] = useState(false)
   const navigate = useNavigate()
@@ -35,7 +39,7 @@ export default function LoginPage() {
   }
 
   function handleGoogleLogin() {
-    window.location.href = getGoogleLoginUrl()
+    window.location.href = createGoogleLoginUrl()
   }
 
   return (
